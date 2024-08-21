@@ -1,5 +1,7 @@
 import { SQLDatabase } from "encore.dev/storage/sqldb";
 import knex from "knex";
+import { Injectable, OnModuleInit } from '@nestjs/common'
+import { PrismaClient } from '@prisma/client'
 
 // Define a database named 'cats', using the database migrations
 // in the "./migrations" folder. Encore automatically provisions,
@@ -20,3 +22,11 @@ export const databaseProviders = [
     useFactory: async () => ORM,
   },
 ];
+
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleInit {
+  async onModuleInit() {
+    // Note: this is optional
+    await this.$connect()
+  }
+}
