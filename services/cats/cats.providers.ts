@@ -1,6 +1,6 @@
 import type { Knex } from "knex";
 import type { Cat } from "./interfaces/cat.interface";
-import { cats as CatModel, Prisma } from '@prisma/client'
+import { cats as CatModel, Prisma } from "@prisma/client";
 
 export const catsProviders = [
   {
@@ -9,4 +9,3 @@ export const catsProviders = [
     inject: ["DATABASE_CONNECTION"],
   },
 ];
-
