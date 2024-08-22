@@ -10,7 +10,11 @@
     "types": [
       "node"
     ],
+    "baseUrl": ".",
     "paths": {
+      "@/*": [
+        "./src/*"
+      ],
       "~encore/*": [
         "./encore.gen/*"
       ]
