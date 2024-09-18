@@ -69,4 +69,18 @@ export class OrganizationsService extends PrismaClient implements OnModuleInit {
 
     return count > 0;
   }
+
+  async deleteById(id: number): Promise<void> {
+    const organization = await this.organization.findUnique({
+      where: { id },
+    });
+
+    if (!organization) {
+      throw APIError.notFound("organization not found");
+    }
+
+    await this.organization.delete({
+      where: { id },
+    });
+  }
 }

@@ -70,3 +70,13 @@ export const createOrganization = api(
     };
   },
 );
+
+// ! temporal and only for dev purposes !!!
+export const deleteOrganization = api(
+  { expose: true, method: "DELETE", path: "/organizations/:id" },
+  async (payload: { id: number }): Promise<void> => {
+    const { organizationsService } = await applicationContext;
+
+    await organizationsService.deleteById(payload.id);
+  },
+);
