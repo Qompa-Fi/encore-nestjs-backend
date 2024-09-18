@@ -69,4 +69,18 @@ export class OrganizationsService extends PrismaClient implements OnModuleInit {
 
     return count > 0;
   }
+
+  async deleteByRuc(ruc: string): Promise<void> {
+    const organization = await this.organization.findUnique({
+      where: { ruc },
+    });
+
+    if (!organization) {
+      throw APIError.notFound("organization not found");
+    }
+
+    await this.organization.delete({
+      where: { ruc },
+    });
+  }
 }

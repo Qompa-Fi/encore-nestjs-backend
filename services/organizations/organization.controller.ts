@@ -70,3 +70,13 @@ export const createOrganization = api(
     };
   },
 );
+
+// ! temporal and only for dev purposes !!!
+export const deleteOrganization = api(
+  { expose: true, method: "DELETE", path: "/organizations/:ruc" },
+  async (payload: { ruc: string }): Promise<void> => {
+    const { organizationsService } = await applicationContext;
+
+    await organizationsService.deleteByRuc(payload.ruc);
+  },
+);
