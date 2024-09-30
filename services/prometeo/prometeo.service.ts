@@ -96,6 +96,55 @@ export class PrometeoService {
     };
   }
 
+  private async doFaulTolerantRequest<T>(
+    enrichedPath: string,
+    requestInit: RequestInit,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<T> {
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const faultTolerantRequest = async (
+      retries = 0,
+      backoff = 100,
+    ): Promise<T> => {
+      const url = `${prometeoApiUrl()}${enrichedPath}`;
+
+      const response = await fetch(url, requestInit);
+
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          log.error(`request failed after ${retries} attempts`);
+
+          throw ServiceError.deadlineExceeded;
+        }
+
+        const { status } = response;
+
+        if (status === 502) {
+          log.warn(
+            `request failed with status ${status}, trying again in ${backoff}ms... (${retries} retries)`,
+          );
+
+          await sleep(backoff);
+
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faultTolerantRequest(retries + 1, nextBackoff);
+        }
+
+        const text = await response.text();
+
+        throw new Error(`request failed with status code ${status}: ${text}`);
+      }
+
+      const data = (await response.json()) as T;
+
+      return data;
+    };
+
+    return await faultTolerantRequest();
+  }
+
   private async doGetProvidersList(): Promise<{
     status: string;
     providers: IListProvidersItemDto[];
@@ -229,66 +278,25 @@ export class PrometeoService {
     payload: PrometeoAPILoginRequestBody,
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<PrometeoAPILoginResponse> {
-    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+    const params = new URLSearchParams({
+      provider: payload.provider,
+      username: payload.username,
+      password: payload.password,
+    });
 
-    const faultTolerantLogin = async (
-      retries = 0,
-      backoff = 100,
-    ): Promise<PrometeoAPILoginResponse> => {
-      if (retries > 0) {
-        log.warn(`trying to login again in... (${retries} retries)`);
-      }
+    if (payload.type) params.append("type", payload.type);
+    if (payload.otp) params.append("otp", payload.otp);
 
-      const bodyParams = new URLSearchParams();
-      bodyParams.append("provider", payload.provider);
-      bodyParams.append("username", payload.username);
-      bodyParams.append("password", payload.password);
-      if (payload.type) bodyParams.append("type", payload.type);
-      if (payload.otp) bodyParams.append("otp", payload.otp);
-
-      const response = await fetch(
-        `${prometeoApiUrl()}/login/`,
-        this.getPrometeoRequestInit("POST", {
-          additionalHeaders: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: bodyParams.toString(),
-        }),
-      );
-
-      if (!response.ok) {
-        if (retries >= maxAttempts) {
-          log.error(`login failed after ${retries} attempts`);
-
-          throw ServiceError.deadlineExceeded;
-        }
-
-        const { status } = response;
-
-        if (status === 502) {
-          log.warn(
-            `login failed with status ${status}, trying again in ${backoff}ms... (${retries} retries)`,
-          );
-
-          await sleep(backoff);
-
-          const nextBackoff = Math.min(backoff * 2, maxBackoff);
-
-          return await faultTolerantLogin(retries + 1, nextBackoff);
-        }
-
-        const data = (await response.json()) as PrometeoAPIErrorLoginResponse;
-        log.debug(`login failed with http status ${response.status}: ${data}`);
-
-        return data;
-      }
-
-      const data = await response.json();
-
-      return data as PrometeoAPILoginResponse;
-    };
-
-    return await faultTolerantLogin();
+    return await this.doFaulTolerantRequest<PrometeoAPILoginResponse>(
+      "/login/",
+      this.getPrometeoRequestInit("POST", {
+        additionalHeaders: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params,
+      }),
+      config,
+    );
   }
 
   async login(
@@ -384,49 +392,15 @@ export class PrometeoService {
     key: string,
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<PrometeoAPISuccessfulListBankAccountsResponse> {
-    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+    const params = new URLSearchParams({ key });
 
-    const queryParams = new URLSearchParams({ key });
-    const url = `${prometeoApiUrl()}/account/?${queryParams}`;
+    const result =
+      await this.doFaulTolerantRequest<PrometeoAPIListBankAccountsResponse>(
+        `/account/?${params}`,
+        this.getPrometeoRequestInit("GET"),
+        config,
+      );
 
-    const faultTolerantListBankAccounts = async (
-      retries = 0,
-      backoff = 100,
-    ) => {
-      const response = await fetch(url, this.getPrometeoRequestInit("GET"));
-
-      if (!response.ok) {
-        if (retries >= maxAttempts) {
-          log.error(`login failed after ${retries} attempts`);
-
-          throw ServiceError.deadlineExceeded;
-        }
-
-        const { status } = response;
-
-        if (status === 502) {
-          log.warn(
-            `cannot list user accounts, trying again in... ${backoff}ms... (${retries} retries)`,
-          );
-
-          await sleep(backoff);
-
-          const nextBackoff = Math.min(backoff * 2, maxBackoff);
-
-          return await faultTolerantListBankAccounts(retries + 1, nextBackoff);
-        }
-
-        const text = await response.text();
-
-        throw new Error(`request failed with status code ${status}: ${text}`);
-      }
-
-      const data = await response.json();
-
-      return data as PrometeoAPIListBankAccountsResponse;
-    };
-
-    const result = await faultTolerantListBankAccounts();
     // ! check if the status is "success" as well
 
     if (result.status === "error") {
@@ -460,55 +434,13 @@ export class PrometeoService {
     { key }: PrometeoAPIGetClientsPayload,
     config?: PrometeoRequestConfig,
   ): Promise<PrometeoAPIGetClientsResponse> {
-    const queryParams = new URLSearchParams({ key });
+    const params = new URLSearchParams({ key });
 
-    const url = `${prometeoApiUrl()}/client/?${queryParams}`;
-
-    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
-
-    const faultTolerantGetClients = async (
-      retries = 0,
-      backoff = 100,
-    ): Promise<PrometeoAPIGetClientsResponse> => {
-      const response = await fetch(url, this.getPrometeoRequestInit("GET"));
-      if (!response.ok) {
-        if (retries >= maxAttempts) {
-          log.error(`cannot get clients after ${retries} attempts`);
-
-          throw ServiceError.deadlineExceeded;
-        }
-
-        if (response.status === 502) {
-          const nextBackoff = Math.min(backoff * 2, maxBackoff);
-
-          return await faultTolerantGetClients(retries + 1, nextBackoff);
-        }
-
-        const text = await response.text();
-        const data = JSON.parse(text);
-
-        log.debug(
-          `request failed with status code ${response.status}: ${text}`,
-        );
-
-        return data as PrometeoAPIGetClientsErrorResponse;
-      }
-
-      // return {
-      //   status: "success",
-      //   clients: {
-      //     "FIC-02412222": "FIDEICOMISO CONSORCIO PUENTES FC",
-      //     "FIC-02501212": "FIDEICOMISO PEÑAROL",
-      //     "FIC-00021244": "FIDEICOMISO CARE TEST",
-      //   },
-      // };
-
-      const data = await response.json();
-
-      return data as PrometeoAPIGetClientsResponse;
-    };
-
-    return await faultTolerantGetClients();
+    return await this.doFaulTolerantRequest<PrometeoAPIGetClientsResponse>(
+      `/client/?${params}`,
+      this.getPrometeoRequestInit("GET"),
+      config,
+    );
   }
 
   async getClients(
@@ -570,49 +502,13 @@ export class PrometeoService {
     client: string,
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<PrometeoAPISelectClientResponse> {
-    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+    const params = new URLSearchParams({ key });
 
-    const url = `${prometeoApiUrl()}/client/${client}/?key=${key}`;
-    const requestInit = this.getPrometeoRequestInit("GET");
-
-    const faulTolerantSelectClient = async (
-      retries = 0,
-      backoff = 200,
-    ): Promise<PrometeoAPISelectClientResponse> => {
-      const response = await fetch(url, requestInit);
-
-      if (!response.ok) {
-        if (retries >= maxAttempts) {
-          log.error(`cannot select client after ${retries} attempts`);
-
-          throw ServiceError.deadlineExceeded;
-        }
-
-        const { status } = response;
-
-        if (status === 502) {
-          log.warn(
-            "cannot select client, trying again in... ${backoff}ms... (${retries} retries)",
-          );
-
-          await sleep(backoff);
-
-          const nextBackoff = Math.min(backoff * 2, maxBackoff);
-
-          return await faulTolerantSelectClient(retries + 1, nextBackoff);
-        }
-
-        const text = await response.text();
-
-        throw new Error(`request failed with status code ${status}: ${text}`);
-      }
-
-      const data = await response.json();
-
-      return data as PrometeoAPISelectClientResponse;
-    };
-
-    return await faulTolerantSelectClient();
+    return await this.doFaulTolerantRequest<PrometeoAPISelectClientResponse>(
+      `/client/${client}/?${params}`,
+      this.getPrometeoRequestInit("GET"),
+      config,
+    );
   }
 
   async selectClient(
@@ -654,59 +550,18 @@ export class PrometeoService {
     payload: PrometeoAPIListBankAccountMovementsPayload,
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<PrometeoAPIListBankAccountMovementsResponse> {
-    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
-
-    const queryParams = new URLSearchParams({
+    const params = new URLSearchParams({
       key: payload.key,
       currency: payload.currency,
       date_start: payload.date_start,
       date_end: payload.date_end,
     });
 
-    const url = `${prometeoApiUrl()}/account/${payload.account}/movement/?${queryParams}`;
-    const requestInit = this.getPrometeoRequestInit("GET");
-
-    const faultTolerantListBankAccountMovements = async (
-      retries = 0,
-      backoff = 100,
-    ): Promise<PrometeoAPIListBankAccountMovementsResponse> => {
-      const response = await fetch(url, requestInit);
-
-      if (!response.ok) {
-        if (retries >= maxAttempts) {
-          log.error(`cannot list user accounts after ${retries} attempts`);
-
-          throw ServiceError.deadlineExceeded;
-        }
-
-        const { status } = response;
-
-        if (status === 502) {
-          log.warn(
-            `cannot list user accounts, trying again in... ${backoff}ms... (${retries} retries)`,
-          );
-
-          await sleep(backoff);
-
-          const nextBackoff = Math.min(backoff * 2, maxBackoff);
-
-          return await faultTolerantListBankAccountMovements(
-            retries + 1,
-            nextBackoff,
-          );
-        }
-
-        const text = await response.text();
-
-        throw new Error(`request failed with status code ${status}: ${text}`);
-      }
-
-      const data = await response.json();
-
-      return data as PrometeoAPIListBankAccountMovementsResponse;
-    };
-
-    return await faultTolerantListBankAccountMovements();
+    return await this.doFaulTolerantRequest<PrometeoAPIListBankAccountMovementsResponse>(
+      `/account/${payload.account}/movement/?${params}`,
+      this.getPrometeoRequestInit("GET"),
+      config,
+    );
   }
 
   async listBankAccountMovements(
