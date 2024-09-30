@@ -576,6 +576,7 @@ export class PrometeoService {
         }
 
         log.error("error listing user accounts but cannot be handled");
+        log.error(`response body was... ${JSON.stringify(result)}`);
 
         throw ServiceError.somethingWentWrong;
       }
