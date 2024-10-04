@@ -60,14 +60,26 @@ export const searchByRUC = api(
 
     const { sunatService } = await applicationContext;
 
-    const result = await sunatService.searchByRUC(ruc);
-    if (!result) {
-      throw APIError.notFound("ruc not found");
-    }
+    try {
+      const result = await sunatService.searchByRUC(ruc);
+      if (!result) {
+        throw APIError.notFound("ruc not found");
+      }
 
-    return {
-      ruc: result,
-    };
+      return {
+        ruc: result,
+      };
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+
+      console.error(
+        `something went unexpectedly wrong while searching by RUC '${ruc}': ${error}`,
+      );
+
+      throw APIError.internal("something went wrong");
+    }
   },
 );
 
