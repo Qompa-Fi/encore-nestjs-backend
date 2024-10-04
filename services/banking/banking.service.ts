@@ -20,7 +20,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     await this.$connect();
   }
 
-  async getPrometeoProviders(): Promise<Provider[]> {
+  private async getPrometeoProviders(): Promise<Provider[]> {
     const providersResponse: { data: Provider[] } =
       await prometeo.listProviders();
     const providers = providersResponse.data;
@@ -35,7 +35,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     return providers;
   }
 
-  async userExistsById(userId: number): Promise<boolean> {
+  private async userExistsById(userId: number): Promise<boolean> {
     try {
       const userExistsResponse: { userExists: boolean } =
         await users.existsById({ id: userId });
@@ -52,32 +52,35 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   }
 
   async setupPrometeoProviderAccess(
+    userId: number,
     inputs: ISetupProviderAccessInputDto,
   ): Promise<{ id: number; providerName: string }> {
     const providers = await this.getPrometeoProviders();
 
-    const selectedProvider = providers.find(
-      (p) => p.name === inputs.prometeo_provider,
-    );
-    if (!selectedProvider) {
-      throw APIError.invalidArgument(
-        `no provider found with name '${inputs.prometeo_provider}'`,
+    if (inputs.prometeo_provider === "test") {
+      log.warn("using test provider...");
+    } else {
+      const selectedProvider = providers.find(
+        (p) => p.name === inputs.prometeo_provider,
       );
+      if (!selectedProvider) {
+        throw APIError.invalidArgument(
+          `no provider found with name '${inputs.prometeo_provider}'`,
+        );
+      }
+
+      const { name, bank } = selectedProvider;
+
+      log.debug(
+        `specified provider is '${name}' - ${bank.name} [${bank.code}]...`,
+      );
+
+      const apiError = validatePrometeoProviderAccessInputs(
+        inputs,
+        selectedProvider,
+      );
+      if (apiError) throw apiError;
     }
-
-    const { name, bank } = selectedProvider;
-
-    log.debug(
-      `specified provider is '${name}' - ${bank.name} [${bank.code}]...`,
-    );
-
-    const apiError = validatePrometeoProviderAccessInputs(
-      inputs,
-      selectedProvider,
-    );
-    if (apiError) throw apiError;
-
-    const userId = 1; // sorry!
 
     const userExists = await this.userExistsById(userId);
     if (!userExists) {
@@ -103,7 +106,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async encryptProviderCredentials(
+  private async encryptProviderCredentials(
     credentials: PrometeoCredentials,
   ): Promise<string> {
     const jsonEncodedCredentials = JSON.stringify(credentials);
@@ -116,7 +119,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     );
   }
 
-  async savePrometeoProviderCredentials(inputs: {
+  private async savePrometeoProviderCredentials(inputs: {
     providerName: string;
     credentials: PrometeoCredentials;
     userId: number;
@@ -151,5 +154,21 @@ export class BankingService extends PrismaClient implements OnModuleInit {
 
       throw ServiceError.somethingWentWrong;
     }
+  }
+
+  async listConfiguredProviderAccess(
+    userId: number,
+  ): Promise<Array<{ id: number; providerName: string }>> {
+    const results = await this.prometeoProviderCredentials.findMany({
+      select: {
+        providerName: true,
+        id: true,
+      },
+      where: {
+        userId: userId,
+      },
+    });
+
+    return results;
   }
 }
