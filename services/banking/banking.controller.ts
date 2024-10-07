@@ -29,7 +29,7 @@ export const setupProviderAccess = api(
   {
     expose: true,
     method: "POST",
-    path: "/banking/providers/setup-access",
+    path: "/banking/providers/:prometeo_provider/setup-access",
     auth: true,
   },
   async (
