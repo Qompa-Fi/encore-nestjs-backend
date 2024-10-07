@@ -6,8 +6,8 @@ export interface SetupProviderAccessResponse {
 }
 
 export interface ListConfiguredProviderAccessResponse {
-  data: Array<{
+  data: {
     id: number;
     provider_name: string;
-  }>;
+  }[];
 }
