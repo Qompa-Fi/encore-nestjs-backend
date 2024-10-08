@@ -7,6 +7,7 @@ import log from "encore.dev/log";
 import Redis from "ioredis";
 
 import { validatePrometeoProviderAccessInputs } from "./validators/setup-provider-access";
+import type { BankingDirectoryWithoutCredentials } from "./types/banking-directory";
 import type { PrometeoAPILoginRequestBody } from "../prometeo/types/prometeo-api";
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
@@ -81,8 +82,14 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   async setupPrometeoProviderAccess(
     userId: number,
     inputs: ISetupProviderAccessInputDto,
-  ): Promise<{ id: number; providerName: string }> {
+  ): Promise<BankingDirectoryWithoutCredentials> {
     const providers = await this.getPrometeoProviders();
+
+    if (inputs.name && inputs.name.length > 90) {
+      throw APIError.invalidArgument(
+        "'name' must be less than 90 characters long",
+      );
+    }
 
     if (inputs.prometeo_provider === "test") {
       log.warn("using test provider...");
@@ -118,6 +125,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
 
     try {
       const result = await this.savePrometeoProviderCredentials({
+        name: inputs.name,
         providerName: inputs.prometeo_provider,
         credentials: inputs.credentials,
         userId,
@@ -167,10 +175,11 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   }
 
   private async savePrometeoProviderCredentials(inputs: {
+    name?: string;
     providerName: string;
     credentials: PrometeoCredentials;
     userId: number;
-  }): Promise<{ id: number; providerName: string }> {
+  }): Promise<BankingDirectoryWithoutCredentials> {
     let encryptedCredentials: string;
 
     try {
@@ -185,7 +194,15 @@ export class BankingService extends PrismaClient implements OnModuleInit {
 
     try {
       const result = await this.bankingDirectory.create({
+        select: {
+          id: true,
+          name: true,
+          providerName: true,
+          createdAt: true,
+          updatedAt: true,
+        },
         data: {
+          name: inputs.name,
           providerName: inputs.providerName,
           userId: inputs.userId,
           encryptedCredentials,
@@ -194,7 +211,10 @@ export class BankingService extends PrismaClient implements OnModuleInit {
 
       return {
         id: result.id,
+        name: result.name,
         providerName: result.providerName,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt?.toISOString() ?? null,
       };
     } catch (error) {
       log.error("error while saving provider credentials", error);
@@ -203,13 +223,22 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async listConfiguredProviderAccess(
-    userId: number,
-  ): Promise<Array<{ id: number; providerName: string }>> {
+  async listConfiguredProviderAccess(userId: number): Promise<
+    {
+      id: number;
+      name: string | null;
+      providerName: string;
+      createdAt: Date;
+      updatedAt: Date | null;
+    }[]
+  > {
     const results = await this.bankingDirectory.findMany({
       select: {
-        providerName: true,
         id: true,
+        name: true,
+        providerName: true,
+        createdAt: true,
+        updatedAt: true,
       },
       where: {
         userId: userId,
