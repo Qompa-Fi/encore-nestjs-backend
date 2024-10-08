@@ -80,26 +80,26 @@ export const queryBankAccountMovements = api(
   {
     expose: true,
     method: "GET",
-    path: "/third-party/prometeo/accounts/:account/movements",
+    path: "/third-party/prometeo/accounts/:account_number/movements",
   },
   async (payload: {
     // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
     // The account to query. See '/third-party/prometeo/accounts' to retrieve a list of accounts
     // in the current provider and/or client.
-    account: string;
+    account_number: string;
     // The currency that the account is denominated in.
     currency: string;
     // The date in 'dd/mm/yyyy' format from which to start querying movements.
-    date_start: string;
+    start_date: string;
     // The date in 'dd/mm/yyyy' format until which to query movements.
-    date_end: string;
+    end_date: string;
   }): Promise<{
     // An array containing all the movements that the specified account has made in the specified currency.
     data: UserBankAccountMovement[];
   }> => {
     log.debug(
-      `retrieving movements from bank account ${payload.account}(${payload.currency}) from ${payload.date_start} to ${payload.date_end}...`,
+      `retrieving movements from bank account ${payload.account_number}(${payload.currency}) from ${payload.start_date} to ${payload.end_date}...`,
     );
 
     const apiError = validateListBankAccountMovementsPayload(payload);
