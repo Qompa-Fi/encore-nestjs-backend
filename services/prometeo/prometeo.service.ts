@@ -176,15 +176,22 @@ export class PrometeoService {
       }
     };
 
-    const results = await Promise.allSettled(
-      providers
-        .filter((p) => {
-          const isSpecifiedCountry = p.country === countryCode;
-          const isCorp = p.code.includes("corp") || p.code.includes("bcp") || p.code.includes("smes");
+    const filteredProviders = providers.filter((p) => {
+      const isSpecifiedCountry = p.country === countryCode;
+      const isCorp =
+        p.code.includes("corp") ||
+        p.code.includes("bcp") ||
+        p.code.includes("smes");
 
-          return isSpecifiedCountry && isCorp;
-        })
-        .map(async (p) => await getProviderDetails(p.code)),
+      return isSpecifiedCountry && isCorp;
+    });
+
+    log.debug(
+      `${filteredProviders.length} provider details will be queried...`,
+    );
+
+    const results = await Promise.allSettled(
+      filteredProviders.map(async (p) => await getProviderDetails(p.code)),
     );
 
     const filteredResults = results.filter((result) => {
@@ -244,7 +251,8 @@ export class PrometeoService {
       bodyParams.append("password", payload.password);
       if (payload.type) bodyParams.append("type", payload.type);
       if (payload.otp) bodyParams.append("otp", payload.otp);
-      if (payload.document_number) bodyParams.append("document_number", payload.document_number);
+      if (payload.document_number)
+        bodyParams.append("document_number", payload.document_number);
 
       const response = await fetch(
         `${prometeoApiUrl()}/login/`,
