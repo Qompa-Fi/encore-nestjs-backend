@@ -52,7 +52,7 @@ export const submitDirectory = api(
     );
 
     return {
-      issued_access: {
+      directory: {
         id: result.id,
         provider_name: result.providerName,
       },

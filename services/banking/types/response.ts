@@ -1,5 +1,7 @@
+import type { UserBankAccount } from "@/services/prometeo/types/user-account";
+
 export interface SetupProviderAccessResponse {
-  issued_access: {
+  directory: {
     id: number;
     provider_name: string;
   };
