@@ -1,14 +1,16 @@
 import { prometeo } from "~encore/clients";
-import { api } from "encore.dev/api";
+import { api, APIError, type Query } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
+import type { UserBankAccountMovement } from "../prometeo/types/user-account";
 import type { Provider } from "@/services/prometeo/types/provider";
 import { mayGetInternalUserIdFromAuthData } from "@/lib/clerk";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
 import type {
   ListConfiguredProviderAccessResponse,
+  ListDirectoryAccountsResponse,
   SetupProviderAccessResponse,
 } from "./types/response";
 
@@ -52,7 +54,7 @@ export const submitDirectory = api(
     );
 
     return {
-      issued_access: {
+      directory: {
         id: result.id,
         provider_name: result.providerName,
       },
@@ -96,5 +98,86 @@ export const listCatalog = api(
     const response: { data: Provider[] } = await prometeo.listProviders();
 
     return response;
+  },
+);
+
+export const listDirectoryAccounts = api(
+  {
+    expose: true,
+    method: "GET",
+    path: "/banking/directory/:id/accounts",
+    auth: true,
+  },
+  async (payload: { id: number }): Promise<ListDirectoryAccountsResponse> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    try {
+      const accounts = await bankingService.listDirectoryAccounts(
+        userId,
+        payload.id,
+      );
+
+      return {
+        data: accounts,
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "unhandled error while listing directory accounts");
+      throw ServiceError.somethingWentWrong;
+    }
+  },
+);
+
+export const queryDirectoryAccountMovements = api(
+  {
+    expose: true,
+    method: "GET",
+    path: "/banking/directory/:id/accounts/:account_number/movements",
+    auth: true,
+  },
+  async (payload: {
+    id: number;
+    account_number: string;
+    currency: Query<string>;
+    start_date: Query<string>;
+    end_date: Query<string>;
+  }): Promise<{
+    data: UserBankAccountMovement[];
+  }> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    try {
+      const movements = await bankingService.queryDirectoryAccountMovements(
+        userId,
+        payload.id,
+        payload.account_number,
+        {
+          currency: payload.currency,
+          start_date: payload.start_date,
+          end_date: payload.end_date,
+        },
+      );
+
+      return {
+        data: movements,
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "unhandled error while querying movements");
+
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );

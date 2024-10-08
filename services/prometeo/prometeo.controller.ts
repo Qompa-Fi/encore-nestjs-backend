@@ -22,7 +22,7 @@ import { ServiceError } from "./service-errors";
 
 // Login to the specified provider using the Prometeo API.
 export const login = api(
-  { expose: true, method: "POST", path: "/third-party/prometeo/auth/login" },
+  { expose: false },
   async (payload: PrometeoAPILoginRequestBody): Promise<LoginResponse> => {
     log.debug(
       `'${payload.username}' is logging in to Prometeo API using provider '${payload.provider}'...`,
@@ -56,7 +56,7 @@ export const login = api(
 
 // Exits the session specified in the headers.
 export const logout = api(
-  { expose: true, method: "POST", path: "/third-party/prometeo/auth/logout" },
+  { expose: false },
   async (payload: {
     // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
@@ -78,28 +78,26 @@ export const logout = api(
 // Endpoint to query movements of a user account in a given currency and date range.
 export const queryBankAccountMovements = api(
   {
-    expose: true,
-    method: "GET",
-    path: "/third-party/prometeo/accounts/:account/movements",
+    expose: false,
   },
   async (payload: {
     // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
     // The account to query. See '/third-party/prometeo/accounts' to retrieve a list of accounts
     // in the current provider and/or client.
-    account: string;
+    account_number: string;
     // The currency that the account is denominated in.
     currency: string;
     // The date in 'dd/mm/yyyy' format from which to start querying movements.
-    date_start: string;
+    start_date: string;
     // The date in 'dd/mm/yyyy' format until which to query movements.
-    date_end: string;
+    end_date: string;
   }): Promise<{
     // An array containing all the movements that the specified account has made in the specified currency.
     data: UserBankAccountMovement[];
   }> => {
     log.debug(
-      `retrieving movements from bank account ${payload.account}(${payload.currency}) from ${payload.date_start} to ${payload.date_end}...`,
+      `retrieving movements from bank account ${payload.account_number}(${payload.currency}) from ${payload.start_date} to ${payload.end_date}...`,
     );
 
     const apiError = validateListBankAccountMovementsPayload(payload);
@@ -117,7 +115,7 @@ export const queryBankAccountMovements = api(
 
 // List all the providers that the Prometeo API supports.
 export const listProviders = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/providers" },
+  { expose: false },
   async (): Promise<{
     // An array with all the providers that the Prometeo API supports.
     data: Provider[];
@@ -137,7 +135,7 @@ export const listProviders = api(
 // List all the clients that the current user has access to. Those clients changes
 // depending on the previously specified provider at endpoint to login.
 export const listClients = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/auth/clients" },
+  { expose: false },
   async (payload: {
     // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
@@ -156,7 +154,7 @@ export const listClients = api(
 // List all the accounts that the specified session key has access to.
 // Those accounts will vary depending on the specified provider and/or client.
 export const listBankAccounts = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/accounts" },
+  { expose: false },
   async (payload: {
     // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
@@ -182,9 +180,7 @@ export const listBankAccounts = api(
 // some minutes until the client is selected.
 export const selectClient = api(
   {
-    expose: true,
-    method: "POST",
-    path: "/third-party/prometeo/auth/select-client",
+    expose: false,
   },
   async (payload: {
     // The session key to be passed to the Prometeo API. This is

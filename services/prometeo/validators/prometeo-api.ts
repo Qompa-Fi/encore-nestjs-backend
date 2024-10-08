@@ -122,21 +122,21 @@ export const validateListBankAccountMovementsPayload = (
     );
   }
 
-  error = checkNonEmptyString("date_start", payload.date_start, 10, 10);
+  error = checkNonEmptyString("date_start", payload.start_date, 10, 10);
   if (error) return error;
 
   const dateFormat = "dd/MM/yyyy";
 
-  if (!isMatch(payload.date_start, dateFormat)) {
+  if (!isMatch(payload.start_date, dateFormat)) {
     return APIError.invalidArgument(
       `'date_start' must be in this format: ${dateFormat}`,
     );
   }
 
-  error = checkNonEmptyString("date_end", payload.date_end, 10, 10);
+  error = checkNonEmptyString("date_end", payload.end_date, 10, 10);
   if (error) return error;
 
-  if (!isMatch(payload.date_end, dateFormat)) {
+  if (!isMatch(payload.end_date, dateFormat)) {
     return APIError.invalidArgument(
       `'date_end' must be in this format: ${dateFormat}`,
     );

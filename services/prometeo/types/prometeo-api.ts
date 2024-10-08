@@ -151,10 +151,10 @@ export interface PrometeoAPISelectClientWrongResponse {
 
 export interface PrometeoAPIListBankAccountMovementsPayload {
   key: string;
-  account: string;
+  account_number: string;
   currency: string;
-  date_start: string;
-  date_end: string;
+  start_date: string;
+  end_date: string;
 }
 
 export type PrometeoAPIListBankAccountMovementsResponse =

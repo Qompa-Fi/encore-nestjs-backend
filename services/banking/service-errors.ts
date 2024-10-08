@@ -10,4 +10,8 @@ export namespace ServiceError {
   export const userNotFound = APIError.aborted(
     "you should create your user first",
   );
+
+  export const directoryNotFound = APIError.notFound(
+    "specified directory was not found",
+  );
 }

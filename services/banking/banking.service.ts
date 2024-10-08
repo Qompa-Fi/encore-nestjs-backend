@@ -4,18 +4,45 @@ import { PrismaClient } from "@prisma/client";
 import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
+import Redis from "ioredis";
 
 import { validatePrometeoProviderAccessInputs } from "./validators/setup-provider-access";
+import type { PrometeoAPILoginRequestBody } from "../prometeo/types/prometeo-api";
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
+import type {
+  UserBankAccount,
+  UserBankAccountMovement,
+} from "../prometeo/types/user-account";
+import type { LoginResponse } from "../prometeo/types/response";
 import type { Provider } from "../prometeo/types/provider";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
 
+const CACHED_PROMETEO_SESSION_KEY_LIFESPAN = 60 * 10; // 10m
+
+const prometeoSessionEncryptionKey = secret("PrometeoSessionEncryptionKey");
 const credentialsEncryptionKey = secret("BankingCredentialsEncryptionKey");
+const redisUsername = secret("RedisUsername");
+const redisPassword = secret("RedisPassword");
+const redisPort = secret("RedisPort");
+const redisHost = secret("RedisHost");
 
 @Injectable()
 export class BankingService extends PrismaClient implements OnModuleInit {
+  cache: Redis;
+
+  constructor() {
+    super();
+
+    this.cache = new Redis({
+      username: redisUsername(),
+      password: redisPassword(),
+      host: redisHost(),
+      port: Number.parseInt(redisPort()),
+    });
+  }
+
   async onModuleInit() {
     await this.$connect();
   }
@@ -106,6 +133,26 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
+  private async decryptProviderCredentials(
+    encryptedCredentials: string,
+  ): Promise<PrometeoCredentials> {
+    const { securityService } = await applicationContext;
+
+    const rawJsonCredentials = securityService.decryptAES256(
+      encryptedCredentials,
+      credentialsEncryptionKey(),
+    );
+
+    const result = JSON.parse(rawJsonCredentials) as PrometeoCredentials;
+    if (!result.username || !result.password) {
+      log.warn("encrypted credentials are not valid, aborting...");
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    return result;
+  }
+
   private async encryptProviderCredentials(
     credentials: PrometeoCredentials,
   ): Promise<string> {
@@ -137,7 +184,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
 
     try {
-      const result = await this.prometeoProviderCredentials.create({
+      const result = await this.bankingDirectory.create({
         data: {
           providerName: inputs.providerName,
           userId: inputs.userId,
@@ -159,7 +206,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   async listConfiguredProviderAccess(
     userId: number,
   ): Promise<Array<{ id: number; providerName: string }>> {
-    const results = await this.prometeoProviderCredentials.findMany({
+    const results = await this.bankingDirectory.findMany({
       select: {
         providerName: true,
         id: true,
@@ -170,5 +217,173 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     });
 
     return results;
+  }
+
+  private async getCachedPrometeoLogin(
+    userId: number,
+    bankingDirectoryId: number,
+  ): Promise<string | null> {
+    const key = `u:${userId}::bd:${bankingDirectoryId}`;
+
+    try {
+      let cipheredValue: string | null;
+
+      try {
+        // I don't expect that a 'nil' value throws an error
+        cipheredValue = await this.cache.get(key);
+      } catch (error) {
+        log.warn(
+          `error while getting cached prometeo session key (key: ${key}), cause: ${error}`,
+        );
+        return null;
+      }
+
+      if (!cipheredValue) return null;
+
+      const { securityService } = await applicationContext;
+      const secretKey = prometeoSessionEncryptionKey();
+
+      return securityService.decryptAES256(cipheredValue, secretKey);
+    } catch (error) {
+      log.error(
+        `unexpected error while decrypting prometeo session key, cause: ${error}`,
+      );
+      log.warn(
+        "'null' value will be returned but the error may indicate that something's off somewhere...",
+      );
+
+      return null;
+    }
+  }
+
+  private async storePrometeoLogin(
+    userId: number,
+    bankingDirectoryId: number,
+    prometeoSessionKey: string,
+  ): Promise<void> {
+    const key = `u:${userId}::bd:${bankingDirectoryId}`;
+
+    const { securityService } = await applicationContext;
+    const secretKey = prometeoSessionEncryptionKey();
+
+    let cipheredValue: string;
+
+    try {
+      cipheredValue = securityService.encryptAES256(
+        prometeoSessionKey,
+        secretKey,
+      );
+    } catch (error) {
+      log.error(
+        `unexpected error while encrypting prometeo session key, cause: ${error}`,
+      );
+      log.warn(
+        "maybe the encryption key is invalid or the secret key is not set correctly...? this won't be spared",
+      );
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    try {
+      await this.cache.setex(
+        key,
+        CACHED_PROMETEO_SESSION_KEY_LIFESPAN,
+        cipheredValue,
+      );
+    } catch (error) {
+      log.error(
+        `unexpected error while trying to save prometeo session key in cache, cause: ${error}`,
+      );
+    }
+  }
+
+  private async doLoginToPrometeoAPI(
+    userId: number,
+    bankingDirectoryId: number,
+  ): Promise<string> {
+    const storedSessionKey = await this.getCachedPrometeoLogin(
+      userId,
+      bankingDirectoryId,
+    );
+    if (storedSessionKey) return storedSessionKey;
+
+    const result = await this.bankingDirectory.findFirst({
+      select: {
+        encryptedCredentials: true,
+        providerName: true,
+      },
+      where: {
+        id: bankingDirectoryId,
+        userId,
+      },
+    });
+    if (!result) throw ServiceError.directoryNotFound;
+
+    const { providerName, encryptedCredentials } = result;
+
+    const credentials =
+      await this.decryptProviderCredentials(encryptedCredentials);
+
+    const loginPayload: PrometeoAPILoginRequestBody = {
+      username: credentials.username,
+      password: credentials.password,
+      provider: providerName,
+    };
+
+    const { session }: LoginResponse = await prometeo.login(loginPayload);
+
+    if (session.requires !== "nothing") {
+      return ""; // unreachable for now
+    }
+
+    await this.storePrometeoLogin(userId, bankingDirectoryId, session.key);
+
+    return session.key;
+  }
+
+  async listDirectoryAccounts(
+    userId: number,
+    bankingDirectoryId: number,
+    prometeoSessionKey?: string,
+  ): Promise<UserBankAccount[]> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+    }
+
+    const response: { data: UserBankAccount[] } =
+      await prometeo.listBankAccounts({
+        key: sessionKey,
+      });
+
+    return response.data;
+  }
+
+  async queryDirectoryAccountMovements(
+    userId: number,
+    directoryId: number,
+    accountNumber: string,
+    filters: {
+      currency: string;
+      start_date: string;
+      end_date: string;
+    },
+    prometeoSessionKey?: string,
+  ): Promise<UserBankAccountMovement[]> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, directoryId);
+    }
+
+    const response: { data: UserBankAccountMovement[] } =
+      await prometeo.queryBankAccountMovements({
+        key: sessionKey,
+        account_number: accountNumber,
+        ...filters,
+      });
+
+    return response.data;
   }
 }

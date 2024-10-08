@@ -667,11 +667,11 @@ export class PrometeoService {
     const queryParams = new URLSearchParams({
       key: payload.key,
       currency: payload.currency,
-      date_start: payload.date_start,
-      date_end: payload.date_end,
+      date_start: payload.start_date,
+      date_end: payload.end_date,
     });
 
-    const url = `${prometeoApiUrl()}/account/${payload.account}/movement/?${queryParams}`;
+    const url = `${prometeoApiUrl()}/account/${payload.account_number}/movement/?${queryParams}`;
     const requestInit = this.getPrometeoRequestInit("GET");
 
     const faultTolerantListBankAccountMovements = async (
