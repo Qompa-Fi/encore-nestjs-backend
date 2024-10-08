@@ -1,6 +1,13 @@
 export interface SetupProviderAccessResponse {
-  issuedProviderAccess: {
-    name: string;
+  issued_access: {
     id: number;
+    provider_name: string;
   };
+}
+
+export interface ListConfiguredProviderAccessResponse {
+  data: {
+    id: number;
+    provider_name: string;
+  }[];
 }

@@ -6,4 +6,8 @@ export namespace ServiceError {
   export const issuerNotFound = APIError.aborted(
     "issuer not found in the system",
   );
+
+  export const userNotFound = APIError.aborted(
+    "you should create your user first",
+  );
 }
