@@ -56,7 +56,10 @@ export const submitDirectory = api(
     return {
       directory: {
         id: result.id,
+        name: result.name,
         provider_name: result.providerName,
+        created_at: result.createdAt,
+        updated_at: result.updatedAt,
       },
     };
   },
@@ -80,7 +83,13 @@ export const listDirectory = api(
     const results = await bankingService.listConfiguredProviderAccess(userId);
 
     return {
-      data: results.map((r) => ({ id: r.id, provider_name: r.providerName })),
+      data: results.map((r) => ({
+        id: r.id,
+        name: r.name ?? null,
+        provider_name: r.providerName,
+        created_at: r.createdAt.toISOString(),
+        updated_at: r.updatedAt?.toISOString() ?? null,
+      })),
     };
   },
 );

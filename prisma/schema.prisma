@@ -61,11 +61,14 @@ model SunatProfile {
 }
 
 model BankingDirectory {
-  id                   Int    @id @default(autoincrement())
-  providerName         String @map("provider_name")
-  encryptedCredentials String @map("encrypted_credentials")
-  userId               Int    @map("user_id")
-  user                 User   @relation(fields: [userId], references: [id])
+  id                   Int       @id @default(autoincrement())
+  name                 String?   @map("name") @db.VarChar(90)
+  providerName         String    @map("provider_name")
+  encryptedCredentials String    @map("encrypted_credentials")
+  userId               Int       @map("user_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime? @updatedAt @map("updated_at")
+  user                 User      @relation(fields: [userId], references: [id])
 
   @@map("banking_directory")
 }
