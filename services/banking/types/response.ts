@@ -13,3 +13,7 @@ export interface ListConfiguredProviderAccessResponse {
     provider_name: string;
   }[];
 }
+
+export interface ListDirectoryAccountsResponse {
+  data: UserBankAccount[];
+}

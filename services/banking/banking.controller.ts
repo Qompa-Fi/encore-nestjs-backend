@@ -1,5 +1,5 @@
 import { prometeo } from "~encore/clients";
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
@@ -9,6 +9,7 @@ import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
 import type {
   ListConfiguredProviderAccessResponse,
+  ListDirectoryAccountsResponse,
   SetupProviderAccessResponse,
 } from "./types/response";
 
@@ -96,5 +97,38 @@ export const listCatalog = api(
     const response: { data: Provider[] } = await prometeo.listProviders();
 
     return response;
+  },
+);
+
+export const listDirectoryAccounts = api(
+  {
+    expose: true,
+    method: "GET",
+    path: "/banking/directory/:id/accounts",
+    auth: true,
+  },
+  async (payload: { id: number }): Promise<ListDirectoryAccountsResponse> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    try {
+      const accounts = await bankingService.listDirectoryAccounts(
+        userId,
+        payload.id,
+      );
+
+      return {
+        data: accounts,
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "unhandled error while listing directory accounts");
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
