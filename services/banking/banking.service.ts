@@ -10,7 +10,10 @@ import { validatePrometeoProviderAccessInputs } from "./validators/setup-provide
 import type { PrometeoAPILoginRequestBody } from "../prometeo/types/prometeo-api";
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
-import type { UserBankAccount } from "../prometeo/types/user-account";
+import type {
+  UserBankAccount,
+  UserBankAccountMovement,
+} from "../prometeo/types/user-account";
 import type { LoginResponse } from "../prometeo/types/response";
 import type { Provider } from "../prometeo/types/provider";
 import applicationContext from "../applicationContext";
@@ -341,15 +344,44 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   async listDirectoryAccounts(
     userId: number,
     bankingDirectoryId: number,
+    prometeoSessionKey?: string,
   ): Promise<UserBankAccount[]> {
-    const prometeoSessionKey = await this.doLoginToPrometeoAPI(
-      userId,
-      bankingDirectoryId,
-    );
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+    }
 
     const response: { data: UserBankAccount[] } =
       await prometeo.listBankAccounts({
-        key: prometeoSessionKey,
+        key: sessionKey,
+      });
+
+    return response.data;
+  }
+
+  async queryDirectoryAccountMovements(
+    userId: number,
+    directoryId: number,
+    accountNumber: string,
+    filters: {
+      currency: string;
+      start_date: string;
+      end_date: string;
+    },
+    prometeoSessionKey?: string,
+  ): Promise<UserBankAccountMovement[]> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, directoryId);
+    }
+
+    const response: { data: UserBankAccountMovement[] } =
+      await prometeo.queryBankAccountMovements({
+        key: sessionKey,
+        account_number: accountNumber,
+        ...filters,
       });
 
     return response.data;
