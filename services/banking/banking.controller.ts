@@ -25,11 +25,11 @@ import type {
  * So if the case above happens, some services might be inactive until the user re-issues its accounts.
  */
 
-export const setupProviderAccess = api(
+export const submitDirectory = api(
   {
     expose: true,
     method: "POST",
-    path: "/banking/providers/:prometeo_provider/setup-access",
+    path: "/banking/directory",
     auth: true,
   },
   async (
@@ -60,11 +60,11 @@ export const setupProviderAccess = api(
   },
 );
 
-export const listConfiguredProviderAccess = api(
+export const listDirectory = api(
   {
     expose: true,
     method: "GET",
-    path: "/banking/providers/configured",
+    path: "/banking/directory",
     auth: true,
   },
   async (): Promise<ListConfiguredProviderAccessResponse> => {
@@ -83,11 +83,11 @@ export const listConfiguredProviderAccess = api(
   },
 );
 
-export const listProviders = api(
+export const listCatalog = api(
   {
     expose: true,
     method: "GET",
-    path: "/banking/providers",
+    path: "/banking/catalog",
     auth: true,
   },
   async (): Promise<{
