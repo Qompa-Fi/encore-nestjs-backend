@@ -359,6 +359,11 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       provider: providerName,
     };
 
+    if (credentials.type && credentials.document_number) {
+      loginPayload.type = credentials.type;
+      loginPayload.document_number = credentials.document_number;
+    }
+
     const { session }: LoginResponse = await prometeo.login(loginPayload);
 
     if (session.requires !== "nothing") {
