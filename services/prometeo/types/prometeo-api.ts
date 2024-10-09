@@ -1,4 +1,5 @@
 import type { UserBankAccount, UserBankAccountMovement } from "./user-account";
+import type { BankingInstitution } from "./institution";
 
 export interface PrometeoAPILoginRequestBody {
   // The provider to login to.
@@ -137,7 +138,7 @@ export type PrometeoAPISelectClientResponse =
 
 export interface PrometeoAPISelectClientSuccessfulResponse {
   status: "success";
-  // This key is only present in certian providers. It should
+  // This key is only present in certain providers. It should
   // be returned to the client to use for future requests, otherwise
   // the client can keep using the same session key that used to perform
   // the request.
@@ -164,4 +165,41 @@ export type PrometeoAPIListBankAccountMovementsResponse =
 export interface PrometeoAPIListBankAccountMovementsSuccessfulResponse {
   status: "success";
   movements: UserBankAccountMovement[];
+}
+
+export interface PrometeoAPIListInstitutionsForTransfersRequestBody {
+  // Prometeo API's session key.
+  key: string;
+}
+
+export interface PrometeoAPIListInstitutionsForTransfersSuccessfulResponse {
+  status: "success";
+  destinations: BankingInstitution[];
+}
+
+export type PrometeoAPIListInstitutionsForTransfersResponse =
+  | PrometeoAPIListInstitutionsForTransfersSuccessfulResponse
+  | PrometeoAPIErrorInvalidKeyResponse
+  | PrometeoAPIErrorMissingAPIKeyResponse;
+
+export interface PrometeoAPIPreprocessTransferRequestBody {
+  // Prometeo API's session key.
+  key: string;
+  // The number of the account that will send the amount.
+  origin_account: string;
+  // The number of the account that will receive the amount.
+  destination_account: string;
+  // The ID of the institution the account belongs to. This endpoint can be
+  // obtained from the Prometeo API's list of institutions for transfers.
+  destination_institution: string;
+  destination_owner_name: string; // !TODO: get
+  // The currency that corresponds to the amount.
+  //
+  // The format must follow the ISO 4217 standard(https://www.iso.org/iso-4217-currency-codes.html).
+  currency: string;
+  // The amount to transfer.
+  amount: number;
+  // The concept under this amount will be transferred.
+  concept: string;
+  branch: string; // !TODO: get
 }

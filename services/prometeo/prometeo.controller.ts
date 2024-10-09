@@ -1,8 +1,9 @@
-import { api, type Header } from "encore.dev/api";
+import { api, APIError, type Header } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import type { IGetClientsResponse } from "./interfaces/get-clients-response.interface";
 import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
+import type { BankingInstitution } from "./types/institution";
 import type {
   UserBankAccount,
   UserBankAccountMovement,
@@ -217,5 +218,39 @@ export const selectClient = api(
     );
 
     return result;
+  },
+);
+
+// A requirement to start a transfer is to specify the destination institution. So here
+// you can claim the list of institutions that the current Prometeo session can use.
+//
+// This Prometeo API endpoint is implemented based on their API reference:
+// https://docs.prometeoapi.com/reference/gettransferdestinations
+export const listInstitutionsForTransfers = api(
+  { expose: false },
+  async (payload: {
+    // The session key to be passed to the Prometeo API.
+    key: Header<"X-Prometeo-Session-Key">;
+  }): Promise<{
+    // An array(originally destinations) containing all the institutions that the specified session key has access to.
+    data: BankingInstitution[];
+  }> => {
+    const { prometeoService } = await applicationContext;
+
+    try {
+      const institutions = await prometeoService.listInstitutionsForTransfers({
+        key: payload.key,
+      });
+
+      return {
+        data: institutions,
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "unhandled error listing institutions for transfers");
+
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
