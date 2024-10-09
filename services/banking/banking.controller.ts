@@ -4,6 +4,7 @@ import log from "encore.dev/log";
 
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
 import type { UserBankAccountMovement } from "../prometeo/types/user-account";
+import type { BankingInstitution } from "../prometeo/types/institution";
 import type { Provider } from "@/services/prometeo/types/provider";
 import { mayGetInternalUserIdFromAuthData } from "@/lib/clerk";
 import applicationContext from "../applicationContext";
@@ -200,3 +201,46 @@ export const queryDirectoryAccountMovements = api(
     }
   },
 );
+
+export const listInstitutionsForTransfers = api(
+  {
+    expose: true,
+    method: "GET",
+    path: "/banking/directory/:id/institutions",
+    auth: true,
+  },
+  async (payload: { id: number }): Promise<{
+    data: BankingInstitution[];
+  }> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    const directoryId = payload.id;
+
+    const results = await bankingService.listInstitutionsForTransfers(
+      userId,
+      directoryId,
+    );
+
+    return {
+      data: results,
+    };
+  },
+);
+
+// export const transferFromDirectoryAccount = api(
+//   {
+//     expose: true,
+//     method: "POST",
+//     path: "/banking/directory/:id/accounts/:account_number/transfer",
+//     auth: true,
+//   },
+//   async (payload: {
+//     id: number;
+//     account_number: string;
+//   }) => {},
+// );

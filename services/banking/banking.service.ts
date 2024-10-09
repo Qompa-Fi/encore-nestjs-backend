@@ -15,6 +15,7 @@ import type {
   UserBankAccount,
   UserBankAccountMovement,
 } from "../prometeo/types/user-account";
+import type { BankingInstitution } from "../prometeo/types/institution";
 import type { LoginResponse } from "../prometeo/types/response";
 import type { Provider } from "../prometeo/types/provider";
 import applicationContext from "../applicationContext";
@@ -423,6 +424,23 @@ export class BankingService extends PrismaClient implements OnModuleInit {
         account_number: accountNumber,
         ...filters,
       });
+
+    return response.data;
+  }
+
+  async listInstitutionsForTransfers(
+    userId: number,
+    bankingDirectoryId: number,
+    prometeoSessionKey?: string,
+  ): Promise<BankingInstitution[]> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+    }
+
+    const response: { data: BankingInstitution[] } =
+      await prometeo.listInstitutionsForTransfers({ key: sessionKey });
 
     return response.data;
   }
