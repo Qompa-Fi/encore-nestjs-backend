@@ -164,9 +164,15 @@ export const queryDirectoryAccountMovements = api(
       throw ServiceError.userNotFound;
     }
 
+    log.debug(
+      `user '${userId}' wants to query its bank accounts, payload: ${payload}`,
+    );
+
     const { bankingService } = await applicationContext;
 
     try {
+      log.debug("querying movements...");
+
       const movements = await bankingService.queryDirectoryAccountMovements(
         userId,
         payload.id,
@@ -176,6 +182,10 @@ export const queryDirectoryAccountMovements = api(
           start_date: payload.start_date,
           end_date: payload.end_date,
         },
+      );
+
+      log.debug(
+        `${movements.length} movements were retrieved from specified account`,
       );
 
       return {

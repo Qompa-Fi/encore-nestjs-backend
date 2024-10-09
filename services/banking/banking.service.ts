@@ -408,7 +408,13 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     let sessionKey = prometeoSessionKey;
 
     if (!prometeoSessionKey) {
+      log.trace(
+        "login in to Prometeo API since no session key was specified...",
+      );
+
       sessionKey = await this.doLoginToPrometeoAPI(userId, directoryId);
+
+      log.trace(`Prometeo API's session key is truthy? ${!!sessionKey}`);
     }
 
     const response: { data: UserBankAccountMovement[] } =
