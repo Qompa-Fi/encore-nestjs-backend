@@ -822,6 +822,8 @@ export class PrometeoService {
 
     if (payload.branch) {
       params.append("branch", payload.branch.toString());
+    } else {
+      params.append("branch", "");
     }
 
     const requestInit = this.getPrometeoRequestInit("POST", {
