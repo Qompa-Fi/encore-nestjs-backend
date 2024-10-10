@@ -1,5 +1,6 @@
 import type { UserBankAccount, UserBankAccountMovement } from "./user-account";
 import type { BankingInstitution } from "./institution";
+import type { TransferRequest } from "./transference";
 
 export interface PrometeoAPILoginRequestBody {
   // The provider to login to.
@@ -182,24 +183,85 @@ export type PrometeoAPIListInstitutionsForTransfersResponse =
   | PrometeoAPIErrorInvalidKeyResponse
   | PrometeoAPIErrorMissingAPIKeyResponse;
 
-export interface PrometeoAPIPreprocessTransferRequestBody {
-  // Prometeo API's session key.
-  key: string;
-  // The number of the account that will send the amount.
-  origin_account: string;
-  // The number of the account that will receive the amount.
-  destination_account: string;
-  // The ID of the institution the account belongs to. This endpoint can be
-  // obtained from the Prometeo API's list of institutions for transfers.
-  destination_institution: string;
-  destination_owner_name: string; // !TODO: get
-  // The currency that corresponds to the amount.
-  //
-  // The format must follow the ISO 4217 standard(https://www.iso.org/iso-4217-currency-codes.html).
-  currency: string;
-  // The amount to transfer.
-  amount: number;
-  // The concept under this amount will be transferred.
-  concept: string;
-  branch: string; // !TODO: get
+export interface PrometeoAPIPreprocessTransferRequestBodyRestrictedToProvider {
+  // Identity card number (only applies to supplier Banco de Bogotá Corporativo de Colombia).
+  document_number?: string;
+  // Type of identity document (only applies to supplier Banco de Bogotá Corporativo de Colombia).
+  document_type?: string;
+  // Name or company name of the account holder (only applies for virtual transfers from the provider RedLink Corporativo Argentina).
+  origin_holder: string;
+  // CUIT of the account holder (only applies for virtual transfers from the provider RedLink Corporativo Argentina).
+  origin_cuit?: string;
+  // CVU of the originating account (only applies for virtual transfers from the provider RedLink Corporate Argentina).
+  origin_cvu?: string;
+  // CUIT of the recipient (only applies for virtual transfers from the provider RedLink Corporativo Argentina).
+  destination_cuit?: string;
+  // Voucher Identifier - Optional (only applies to virtual transfers from RedLink Corporate Argentina provider).
+  voucher_id?: number;
 }
+
+/**
+ * Prometeo API Reference: https://docs.prometeoapi.com/reference/transferpreprocess.
+ */
+export type PrometeoAPIPreprocessTransferRequestBody =
+  // PrometeoAPIPreprocessTransferRequestBodyRestrictedToProvider & {
+  {
+    // Prometeo API's session key.
+    key: string;
+    // The number of the account that will send the amount.
+    origin_account: string;
+    // The number of the account that will receive the amount.
+    destination_account: string;
+    // The ID of the institution the account belongs to. This endpoint can be
+    // obtained from the Prometeo API's list of institutions for transfers.
+    destination_institution: number;
+    // Optional if not applicable. The name of the owner of the destination account.
+    destination_owner_name?: string;
+    // Optional if not applicable. Type of target account.
+    destination_account_type?: string;
+    // The concept under this amount will be transferred.
+    concept: string;
+    // Optional if not applicable. The branch number of the destination account.
+    branch?: number;
+    // The currency that corresponds to the amount.
+    //
+    // The format must follow the ISO 4217 standard(https://www.iso.org/iso-4217-currency-codes.html).
+    currency: string;
+    // The amount to transfer.
+    amount: number;
+  };
+
+export interface PrometeoAPIPreprocessTransferSuccessfulResponse {
+  result: TransferRequest;
+  status: "success";
+}
+
+export type PrometeoAPIPreprocessTransferResponse =
+  | PrometeoAPIPreprocessTransferSuccessfulResponse
+  | PrometeoAPIErrorInvalidKeyResponse
+  | PrometeoAPIErrorMissingAPIKeyResponse;
+
+/**
+ * {
+  "result": {
+    "approved": true,
+    "authorization_devices": [
+      {
+        "data": [
+          "F-4",
+          "B-2",
+          "G-7"
+        ],
+        "type": "cardCode"
+      },
+      {
+        "data": null,
+        "type": "pin"
+      }
+    ],
+    "message": null,
+    "request_id": "0b7d6b32d1be4c11bde21e7ddc08cc36"
+  },
+  "status": "success"
+}
+ */

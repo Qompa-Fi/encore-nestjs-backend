@@ -2,8 +2,12 @@ import { api, APIError, type Header } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import type { IGetClientsResponse } from "./interfaces/get-clients-response.interface";
-import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
+import type {
+  PrometeoAPILoginRequestBody,
+  PrometeoAPIPreprocessTransferRequestBody,
+} from "./types/prometeo-api";
 import type { BankingInstitution } from "./types/institution";
+import type { TransferRequest } from "./types/transference";
 import type {
   UserBankAccount,
   UserBankAccountMovement,
@@ -250,6 +254,32 @@ export const listInstitutionsForTransfers = api(
 
       log.error(error, "unhandled error listing institutions for transfers");
 
+      throw ServiceError.somethingWentWrong;
+    }
+  },
+);
+
+export const preprocessTransfer = api(
+  {
+    expose: false,
+  },
+  async (
+    payload: PrometeoAPIPreprocessTransferRequestBody,
+  ): Promise<{
+    request: TransferRequest;
+  }> => {
+    try {
+      const { prometeoService } = await applicationContext;
+
+      const request = await prometeoService.preprocessTransfer(payload);
+
+      return {
+        request,
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "unhandled error preprocessing transfer");
       throw ServiceError.somethingWentWrong;
     }
   },
