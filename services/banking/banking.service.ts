@@ -15,6 +15,9 @@ import type {
   UserBankAccount,
   UserBankAccountMovement,
 } from "../prometeo/types/user-account";
+import type { PreprocessTranferDto } from "./dtos/preprocess-transfer.dto";
+import type { BankingInstitution } from "../prometeo/types/institution";
+import type { TransferRequest } from "../prometeo/types/transference";
 import type { LoginResponse } from "../prometeo/types/response";
 import type { Provider } from "../prometeo/types/provider";
 import applicationContext from "../applicationContext";
@@ -359,6 +362,11 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       provider: providerName,
     };
 
+    if (credentials.type && credentials.document_number) {
+      loginPayload.type = credentials.type;
+      loginPayload.document_number = credentials.document_number;
+    }
+
     const { session }: LoginResponse = await prometeo.login(loginPayload);
 
     if (session.requires !== "nothing") {
@@ -403,7 +411,13 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     let sessionKey = prometeoSessionKey;
 
     if (!prometeoSessionKey) {
+      log.trace(
+        "login in to Prometeo API since no session key was specified...",
+      );
+
       sessionKey = await this.doLoginToPrometeoAPI(userId, directoryId);
+
+      log.trace(`Prometeo API's session key is truthy? ${!!sessionKey}`);
     }
 
     const response: { data: UserBankAccountMovement[] } =
@@ -414,5 +428,45 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       });
 
     return response.data;
+  }
+
+  async listInstitutionsForTransfers(
+    userId: number,
+    bankingDirectoryId: number,
+    prometeoSessionKey?: string,
+  ): Promise<BankingInstitution[]> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+    }
+
+    const response: { data: BankingInstitution[] } =
+      await prometeo.listInstitutionsForTransfers({ key: sessionKey });
+
+    return response.data;
+  }
+
+  async preprocessTransfer(
+    userId: number,
+    bankingDirectoryId: number,
+    payload: PreprocessTranferDto,
+    prometeoSessionKey?: string,
+  ): Promise<TransferRequest> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+    }
+
+    const transferRequestPayload = {
+      key: sessionKey,
+      ...payload,
+    };
+
+    const response: { request: TransferRequest } =
+      await prometeo.preprocessTransfer(transferRequestPayload);
+
+    return response.request;
   }
 }

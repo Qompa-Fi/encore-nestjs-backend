@@ -26,14 +26,12 @@ export const validatePrometeoProviderAccessInputs = (
     return APIError.invalidArgument('missing "password" in credentials field');
   }
 
-  const { additionalFields = {} } = inputs.credentials;
-
   for (const authField of selectedProvider.auth_fields) {
     const alreadyHandled =
       authField.name === "username" || authField.name === "password";
     if (alreadyHandled) continue;
 
-    const entry = additionalFields[authField.name];
+    const entry = inputs.credentials[authField.name];
     if (entry === undefined) {
       if (!authField.optional) {
         return APIError.invalidArgument(

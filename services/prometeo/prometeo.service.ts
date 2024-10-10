@@ -10,9 +10,13 @@ import type {
   UserBankAccount,
   UserBankAccountMovement,
 } from "./types/user-account";
+import type { BankingInstitution } from "./types/institution";
+import type { TransferRequest } from "./types/transference";
 import type { LoginResponse } from "./types/response";
 import type {
+  PrometeoAPIListInstitutionsForTransfersRequestBody,
   PrometeoAPISuccessfulListBankAccountsResponse,
+  PrometeoAPIPreprocessTransferRequestBody,
   PrometeoAPIListBankAccountsResponse,
   PrometeoAPIGetClientsErrorResponse,
   PrometeoAPIErrorLoginResponse,
@@ -24,6 +28,8 @@ import type {
   PrometeoAPISelectClientResponse,
   PrometeoAPIListBankAccountMovementsPayload,
   PrometeoAPIListBankAccountMovementsResponse,
+  PrometeoAPIListInstitutionsForTransfersResponse,
+  PrometeoAPIPreprocessTransferResponse,
 } from "./types/prometeo-api";
 import type { Provider } from "./types/provider";
 import type { Client } from "./types/client";
@@ -729,6 +735,7 @@ export class PrometeoService {
         }
 
         log.error("error listing user accounts but cannot be handled");
+        log.debug(`result was... ${JSON.stringify(result)}`);
 
         throw ServiceError.somethingWentWrong;
       }
@@ -741,5 +748,115 @@ export class PrometeoService {
 
       throw ServiceError.somethingWentWrong;
     }
+  }
+
+  async listInstitutionsForTransfers(
+    payload: PrometeoAPIListInstitutionsForTransfersRequestBody,
+  ): Promise<BankingInstitution[]> {
+    const url = `${prometeoApiUrl()}/transfer/destinations?key=${payload.key}`;
+
+    const requestInit = this.getPrometeoRequestInit("GET");
+
+    const response = await fetch(url, requestInit);
+    if (!response.ok) {
+      const text = await response.text();
+      const { status } = response;
+
+      log.error(`request failed with status code ${status}: ${text}`);
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      const { status } = response;
+
+      log.error(`request failed with status code ${status}: ${text}`);
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    const result =
+      (await response.json()) as PrometeoAPIListInstitutionsForTransfersResponse;
+
+    if (result.status === "error") {
+      if (result.message === "Invalid key") {
+        throw ServiceError.sessionKeyInvalidOrExpired;
+      }
+
+      log.error("error listing institutions but cannot be handled yet");
+      log.warn(
+        `response: ${response}, response body was ${JSON.stringify(result)}`,
+      );
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    return result.destinations;
+  }
+
+  async preprocessTransfer(
+    payload: PrometeoAPIPreprocessTransferRequestBody,
+  ): Promise<TransferRequest> {
+    const url = `${prometeoApiUrl()}/transfer/preprocess?key=${payload.key}`;
+
+    const params = new URLSearchParams({
+      origin_account: payload.origin_account,
+      destination_account: payload.destination_account,
+      destination_institution: payload.destination_institution.toString(),
+      concept: payload.concept,
+      currency: payload.currency,
+      amount: payload.amount.toString(),
+    });
+
+    if (payload.destination_owner_name) {
+      params.append("destination_owner_name", payload.destination_owner_name);
+    }
+
+    if (payload.destination_account_type) {
+      params.append(
+        "destination_account_type",
+        payload.destination_account_type,
+      );
+    }
+
+    if (payload.branch) {
+      params.append("branch", payload.branch.toString());
+    }
+
+    const requestInit = this.getPrometeoRequestInit("POST", {
+      additionalHeaders: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
+    });
+
+    const response = await fetch(url, requestInit);
+    if (!response.ok) {
+      const text = await response.text();
+      const { status } = response;
+
+      log.error(`request failed with status code ${status}: ${text}`);
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    const result =
+      (await response.json()) as PrometeoAPIPreprocessTransferResponse;
+
+    if (result.status === "error") {
+      if (result.message === "Invalid key") {
+        throw ServiceError.sessionKeyInvalidOrExpired;
+      }
+
+      log.error("error listing institutions but cannot be handled yet");
+      log.warn(
+        `response status: ${response.statusText}, response body was ${JSON.stringify(result)}`,
+      );
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    return result.result;
   }
 }

@@ -4,6 +4,7 @@ import log from "encore.dev/log";
 
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
 import type { UserBankAccountMovement } from "../prometeo/types/user-account";
+import type { BankingInstitution } from "../prometeo/types/institution";
 import type { Provider } from "@/services/prometeo/types/provider";
 import { mayGetInternalUserIdFromAuthData } from "@/lib/clerk";
 import applicationContext from "../applicationContext";
@@ -13,6 +14,10 @@ import type {
   ListDirectoryAccountsResponse,
   SetupProviderAccessResponse,
 } from "./types/response";
+import type {
+  PreprocessTranferResponse,
+  PreprocessTranferDto,
+} from "./dtos/preprocess-transfer.dto";
 
 /**
  * We mainly need two things:
@@ -164,9 +169,15 @@ export const queryDirectoryAccountMovements = api(
       throw ServiceError.userNotFound;
     }
 
+    log.debug(
+      `user '${userId}' wants to query its bank accounts, payload: ${payload}`,
+    );
+
     const { bankingService } = await applicationContext;
 
     try {
+      log.debug("querying movements...");
+
       const movements = await bankingService.queryDirectoryAccountMovements(
         userId,
         payload.id,
@@ -176,6 +187,10 @@ export const queryDirectoryAccountMovements = api(
           start_date: payload.start_date,
           end_date: payload.end_date,
         },
+      );
+
+      log.debug(
+        `${movements.length} movements were retrieved from specified account`,
       );
 
       return {
@@ -190,3 +205,89 @@ export const queryDirectoryAccountMovements = api(
     }
   },
 );
+
+export const listInstitutionsForTransfers = api(
+  {
+    expose: true,
+    method: "GET",
+    path: "/banking/directory/:id/institutions",
+    auth: true,
+  },
+  async (payload: { id: number }): Promise<{
+    data: BankingInstitution[];
+  }> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    const directoryId = payload.id;
+
+    const results = await bankingService.listInstitutionsForTransfers(
+      userId,
+      directoryId,
+    );
+
+    return {
+      data: results,
+    };
+  },
+);
+
+export const requestTransfer = api(
+  {
+    expose: true,
+    method: "POST",
+    path: "/banking/directory/:id/request-transfer",
+    auth: true,
+  },
+  async (
+    payload: {
+      id: number;
+    } & PreprocessTranferDto,
+  ): Promise<PreprocessTranferResponse> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    const directoryId = payload.id;
+
+    const request = await bankingService.preprocessTransfer(
+      userId,
+      directoryId,
+      {
+        concept: payload.concept,
+        branch: payload.branch,
+        currency: payload.currency,
+        amount: payload.amount,
+        origin_account: payload.origin_account,
+        destination_account: payload.destination_account,
+        destination_institution: payload.destination_institution,
+        destination_owner_name: payload.destination_owner_name,
+        destination_account_type: payload.destination_account_type,
+      },
+    );
+
+    return {
+      request,
+    };
+  },
+);
+
+// export const transferFromDirectoryAccount = api(
+//   {
+//     expose: true,
+//     method: "POST",
+//     path: "/banking/directory/:id/accounts/:account_number/transfer",
+//     auth: true,
+//   },
+//   async (payload: {
+//     id: number;
+//     account_number: string;
+//   }) => {},
+// );
