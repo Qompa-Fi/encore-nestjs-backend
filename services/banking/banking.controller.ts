@@ -14,6 +14,10 @@ import type {
   ListDirectoryAccountsResponse,
   SetupProviderAccessResponse,
 } from "./types/response";
+import type {
+  PreprocessTranferResponse,
+  PreprocessTranferDto,
+} from "./dtos/preprocess-transfer.dto";
 
 /**
  * We mainly need two things:
@@ -228,6 +232,49 @@ export const listInstitutionsForTransfers = api(
 
     return {
       data: results,
+    };
+  },
+);
+
+export const requestTransfer = api(
+  {
+    expose: true,
+    method: "POST",
+    path: "/banking/directory/:id/request-transfer",
+    auth: true,
+  },
+  async (
+    payload: {
+      id: number;
+    } & PreprocessTranferDto,
+  ): Promise<PreprocessTranferResponse> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    const directoryId = payload.id;
+
+    const request = await bankingService.preprocessTransfer(
+      userId,
+      directoryId,
+      {
+        concept: payload.concept,
+        branch: payload.branch,
+        currency: payload.currency,
+        amount: payload.amount,
+        origin_account: payload.origin_account,
+        destination_account: payload.destination_account,
+        destination_institution: payload.destination_institution,
+        destination_owner_name: payload.destination_owner_name,
+        destination_account_type: payload.destination_account_type,
+      },
+    );
+
+    return {
+      request,
     };
   },
 );

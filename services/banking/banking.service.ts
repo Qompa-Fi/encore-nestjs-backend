@@ -15,7 +15,9 @@ import type {
   UserBankAccount,
   UserBankAccountMovement,
 } from "../prometeo/types/user-account";
+import type { PreprocessTranferDto } from "./dtos/preprocess-transfer.dto";
 import type { BankingInstitution } from "../prometeo/types/institution";
+import type { TransferRequest } from "../prometeo/types/transference";
 import type { LoginResponse } from "../prometeo/types/response";
 import type { Provider } from "../prometeo/types/provider";
 import applicationContext from "../applicationContext";
@@ -443,5 +445,28 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       await prometeo.listInstitutionsForTransfers({ key: sessionKey });
 
     return response.data;
+  }
+
+  async preprocessTransfer(
+    userId: number,
+    bankingDirectoryId: number,
+    payload: PreprocessTranferDto,
+    prometeoSessionKey?: string,
+  ): Promise<TransferRequest> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!prometeoSessionKey) {
+      sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+    }
+
+    const transferRequestPayload = {
+      key: sessionKey,
+      ...payload,
+    };
+
+    const response: { request: TransferRequest } =
+      await prometeo.preprocessTransfer(transferRequestPayload);
+
+    return response.request;
   }
 }
