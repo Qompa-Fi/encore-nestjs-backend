@@ -2,6 +2,7 @@ import { prometeo } from "~encore/clients";
 import { api, APIError, type Query } from "encore.dev/api";
 import log from "encore.dev/log";
 
+import type { PrometeoAPIConfirmTransferRequestBody } from "../prometeo/types/prometeo-api";
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
 import type { UserBankAccountMovement } from "../prometeo/types/user-account";
 import type { BankingInstitution } from "../prometeo/types/institution";
@@ -281,15 +282,41 @@ export const requestTransfer = api(
   },
 );
 
-// export const transferFromDirectoryAccount = api(
-//   {
-//     expose: true,
-//     method: "POST",
-//     path: "/banking/directory/:id/accounts/:account_number/transfer",
-//     auth: true,
-//   },
-//   async (payload: {
-//     id: number;
-//     account_number: string;
-//   }) => {},
-// );
+export const confirmTransfer = api(
+  {
+    expose: true,
+    method: "POST",
+    path: "/banking/directory/:id/confirm-transfer",
+    auth: true,
+  },
+  async (payload: {
+    id: number;
+    request_id: string;
+    authorization_type: string;
+    authorization_data: string;
+  }): Promise<{
+    result: {
+      message: string;
+      success: boolean;
+    };
+  }> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    const directoryId = payload.id;
+
+    const result = await bankingService.confirmTransfer(
+      userId,
+      directoryId,
+      payload,
+    );
+
+    return {
+      result,
+    };
+  },
+);
