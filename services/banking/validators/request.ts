@@ -1,12 +1,12 @@
 import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import type { ISetupDirectory } from "../dtos/setup-directory.dto";
+import type { SetupDirectoryParams } from "../types/request";
 import type { Provider } from "../../prometeo/types/provider";
 import { ServiceError } from "../service-errors";
 
-export const validateDirectoryInputs = (
-  inputs: ISetupDirectory,
+export const validateSetupDirectoryInputs = (
+  inputs: SetupDirectoryParams,
   selectedProvider: Provider,
 ): APIError | undefined => {
   if (!selectedProvider.auth_fields) {

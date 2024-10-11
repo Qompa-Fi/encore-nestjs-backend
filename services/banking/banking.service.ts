@@ -6,10 +6,10 @@ import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 import Redis from "ioredis";
 
-import { validateDirectoryInputs } from "./validators/setup-directory";
+import { validateSetupDirectoryInputs } from "./validators/request";
 import type { BankingDirectoryWithoutCredentials } from "./types/banking-directory";
 import type { PrometeoAPILoginRequestBody } from "../prometeo/types/prometeo-api";
-import type { ISetupDirectory } from "./dtos/setup-directory.dto";
+import type { SetupDirectoryParams } from "./types/request";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
 import type {
   UserBankAccount,
@@ -84,7 +84,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
 
   async setupDirectory(
     userId: number,
-    inputs: ISetupDirectory,
+    inputs: SetupDirectoryParams,
   ): Promise<BankingDirectoryWithoutCredentials> {
     const providers = await this.getPrometeoProviders();
 
@@ -112,7 +112,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
         `specified provider is '${name}' - ${bank.name} [${bank.code}]...`,
       );
 
-      const apiError = validateDirectoryInputs(inputs, selectedProvider);
+      const apiError = validateSetupDirectoryInputs(inputs, selectedProvider);
       if (apiError) throw apiError;
     }
 

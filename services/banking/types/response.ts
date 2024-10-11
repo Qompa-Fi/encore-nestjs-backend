@@ -1,4 +1,5 @@
 import type { BankingInstitution } from "@/services/prometeo/types/institution";
+import type { Provider } from "@/services/prometeo/types/provider";
 import type {
   UserBankAccountMovement,
   UserBankAccount,
@@ -38,4 +39,8 @@ export interface ConfirmTransferResponse {
     message: string;
     success: boolean;
   };
+}
+
+export interface ListCatalogResponse {
+  data: Provider[];
 }

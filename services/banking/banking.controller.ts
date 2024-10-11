@@ -1,9 +1,8 @@
 import { prometeo } from "~encore/clients";
-import { api, APIError, type Query } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import type { Provider } from "@/services/prometeo/types/provider";
-import type { ISetupDirectory } from "./dtos/setup-directory.dto";
 import { mayGetInternalUserIdFromAuthData } from "@/lib/clerk";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
@@ -14,22 +13,28 @@ import type {
   ConfirmTransferResponse,
   ListDirectoriesResponse,
   SetupDirectoryResponse,
+  ListCatalogResponse,
 } from "./types/response";
 import type {
-  PreprocessTranferResponse,
-  PreprocessTranferDto,
-} from "./dtos/preprocess-transfer.dto";
+  QueryDirectoryAccountMovementsParams,
+  ListDirectoryInstitutionsParams,
+  ListDirectoryAccountsParams,
+  ConfirmTransferParams,
+  RequestTransferParams,
+  SetupDirectoryParams,
+} from "./types/request";
+import type { PreprocessTranferResponse } from "./dtos/preprocess-transfer.dto";
 
 // This service allows to configure a directory with credentials to allow
 // Prometeo API to log-in to read and mutate the user's bank accounts.
-export const submitDirectory = api(
+export const submitDirectory = api<SetupDirectoryParams>(
   {
     expose: true,
     method: "POST",
     path: "/banking/directory",
     auth: true,
   },
-  async (payload: ISetupDirectory): Promise<SetupDirectoryResponse> => {
+  async (payload): Promise<SetupDirectoryResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -97,9 +102,7 @@ export const listCatalog = api(
     path: "/banking/catalog",
     auth: true,
   },
-  async (): Promise<{
-    data: Provider[];
-  }> => {
+  async (): Promise<ListCatalogResponse> => {
     const response: { data: Provider[] } = await prometeo.listProviders();
 
     return response;
@@ -113,14 +116,14 @@ export const listCatalog = api(
 // Normally the account ID and number will be partially censored but still the ID
 // should be used for subsequent API calls when trying to transfer money, query bank
 // account movements and so on.
-export const listDirectoryAccounts = api(
+export const listDirectoryAccounts = api<ListDirectoryAccountsParams>(
   {
     expose: true,
     method: "GET",
     path: "/banking/directory/:id/accounts",
     auth: true,
   },
-  async (payload: { id: number }): Promise<ListDirectoryAccountsResponse> => {
+  async (payload): Promise<ListDirectoryAccountsResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -151,76 +154,69 @@ export const listDirectoryAccounts = api(
 //
 // The parameter for currency is important since it will be used to match an account
 // and then list its movements.
-export const queryDirectoryAccountMovements = api(
-  {
-    expose: true,
-    method: "GET",
-    path: "/banking/directory/:id/accounts/:account_number/movements",
-    auth: true,
-  },
-  async (payload: {
-    id: number;
-    account_number: string;
-    currency: Query<string>;
-    start_date: Query<string>;
-    end_date: Query<string>;
-  }): Promise<QueryAccountMovementsResponse> => {
-    const userId = mayGetInternalUserIdFromAuthData();
-    if (!userId) {
-      throw ServiceError.userNotFound;
-    }
-
-    log.debug(
-      `user '${userId}' wants to query its bank accounts, payload: ${payload}`,
-    );
-
-    const { bankingService } = await applicationContext;
-
-    try {
-      log.debug("querying movements...");
-
-      const movements = await bankingService.queryDirectoryAccountMovements(
-        userId,
-        payload.id,
-        payload.account_number,
-        {
-          currency: payload.currency,
-          start_date: payload.start_date,
-          end_date: payload.end_date,
-        },
-      );
+export const queryDirectoryAccountMovements =
+  api<QueryDirectoryAccountMovementsParams>(
+    {
+      expose: true,
+      method: "GET",
+      path: "/banking/directory/:id/accounts/:account_number/movements",
+      auth: true,
+    },
+    async (payload): Promise<QueryAccountMovementsResponse> => {
+      const userId = mayGetInternalUserIdFromAuthData();
+      if (!userId) {
+        throw ServiceError.userNotFound;
+      }
 
       log.debug(
-        `${movements.length} movements were retrieved from specified account`,
+        `user '${userId}' wants to query its bank accounts, payload: ${payload}`,
       );
 
-      return {
-        data: movements,
-      };
-    } catch (error) {
-      if (error instanceof APIError) throw error;
+      const { bankingService } = await applicationContext;
 
-      log.error(error, "unhandled error while querying movements");
+      try {
+        log.debug("querying movements...");
 
-      throw ServiceError.somethingWentWrong;
-    }
-  },
-);
+        const movements = await bankingService.queryDirectoryAccountMovements(
+          userId,
+          payload.id,
+          payload.account_number,
+          {
+            currency: payload.currency,
+            start_date: payload.start_date,
+            end_date: payload.end_date,
+          },
+        );
+
+        log.debug(
+          `${movements.length} movements were retrieved from specified account`,
+        );
+
+        return {
+          data: movements,
+        };
+      } catch (error) {
+        if (error instanceof APIError) throw error;
+
+        log.error(error, "unhandled error while querying movements");
+
+        throw ServiceError.somethingWentWrong;
+      }
+    },
+  );
 
 // List of institutions that the client should use when trying to transfer money.
 //
 // Normally a user might need to select an institution when they want to transfer
 // money using an account number or CCI.
-export const listDirectoryInstitutions = api(
+export const listDirectoryInstitutions = api<ListDirectoryInstitutionsParams>(
   {
     expose: true,
     method: "GET",
     path: "/banking/directory/:id/institutions",
     auth: true,
   },
-  async (payload: {
-    id: number;
-  }): Promise<ListDirectoryInstitutionsResponse> => {
+  async (payload): Promise<ListDirectoryInstitutionsResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -247,18 +243,14 @@ export const listDirectoryInstitutions = api(
 //
 // Other use case can also be to use it confirm that the user-specified
 // transaction information is correct since the user might need to perform a confirmation step.
-export const requestTransfer = api(
+export const requestTransfer = api<RequestTransferParams>(
   {
     expose: true,
     method: "POST",
     path: "/banking/directory/:id/request-transfer",
     auth: true,
   },
-  async (
-    payload: {
-      id: number;
-    } & PreprocessTranferDto,
-  ): Promise<PreprocessTranferResponse> => {
+  async (payload): Promise<PreprocessTranferResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -290,20 +282,14 @@ export const requestTransfer = api(
 
 // After requesting a transfer, the user must validate its identity and confirm
 // the transfer with this endpoint.
-export const confirmTransfer = api(
+export const confirmTransfer = api<ConfirmTransferParams>(
   {
     expose: true,
     method: "POST",
     path: "/banking/directory/:id/confirm-transfer",
     auth: true,
   },
-  async (payload: {
-    id: number;
-    request_id: string;
-    authorization_type: string;
-    authorization_data: string;
-    authorization_device_number?: string;
-  }): Promise<ConfirmTransferResponse> => {
+  async (payload): Promise<ConfirmTransferResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
