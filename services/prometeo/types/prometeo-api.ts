@@ -1,6 +1,7 @@
 import type { UserBankAccount, UserBankAccountMovement } from "./user-account";
 import type { BankingInstitution } from "./institution";
 import type { TransferRequest } from "./transference";
+import type { Header } from "encore.dev/api";
 
 export interface PrometeoAPILoginRequestBody {
   // The provider to login to.
@@ -219,6 +220,7 @@ export type PrometeoAPIPreprocessTransferRequestBody =
     destination_owner_name?: string;
     // Optional if not applicable. Type of target account.
     destination_account_type?: string;
+    authorization_device_number?: string;
     // The concept under this amount will be transferred.
     concept: string;
     // Optional if not applicable. The branch number of the destination account.
@@ -265,3 +267,37 @@ export type PrometeoAPIPreprocessTransferResponse =
   "status": "success"
 }
  */
+
+export interface PrometeoAPIConfirmTransferRequestBody {
+  key: string;
+
+  // ID of the request returned by the transfer preprocessing
+  // endpoint of the Prometeo API.
+  request_id: string;
+  // Name of the verification method to be used, corresponds to
+  // the type field in the list of verification methods returned
+  // by the transfer preprocessing endpoint of the Prometeo API.
+  //
+  // If no verification method is required, this parameter is left
+  // empty.
+  authorization_type: string;
+  // Verification value (pin number, coordinate card response,etc.)
+  // if there are several values, they must be separated by comma.
+  authorization_data: string;
+  // ! careful if 'authorization_device_number' was required in preprocess
+  // 'authorization_device_number': transfer_data['authorization_device_number']
+  authorization_device_number?: string;
+}
+
+export interface PrometeoAPIConfirmTransferSuccessfulResponse {
+  status: "success";
+  transfer: {
+    message: string;
+    success: boolean;
+  };
+}
+
+export type PrometeoAPIConfirmTransferResponse =
+  | PrometeoAPIConfirmTransferSuccessfulResponse
+  | PrometeoAPIErrorInvalidKeyResponse
+  | PrometeoAPIErrorMissingAPIKeyResponse;

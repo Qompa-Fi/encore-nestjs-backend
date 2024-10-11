@@ -1,7 +1,7 @@
 export interface TransferRequest {
   approved: boolean;
   authorization_devices: {
-    data: string[];
+    data: string[] | null;
     type: string;
   };
   message: string | null;

@@ -8,7 +8,10 @@ import Redis from "ioredis";
 
 import { validatePrometeoProviderAccessInputs } from "./validators/setup-provider-access";
 import type { BankingDirectoryWithoutCredentials } from "./types/banking-directory";
-import type { PrometeoAPILoginRequestBody } from "../prometeo/types/prometeo-api";
+import type {
+  PrometeoAPIConfirmTransferRequestBody,
+  PrometeoAPILoginRequestBody,
+} from "../prometeo/types/prometeo-api";
 import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
 import type {
@@ -456,7 +459,9 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     let sessionKey = prometeoSessionKey;
 
     if (!prometeoSessionKey) {
+      log.trace("session key is not provided, doing login...");
       sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+      log.trace("successfully logged in Prometeo API");
     }
 
     const transferRequestPayload = {
@@ -467,6 +472,38 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     const response: { request: TransferRequest } =
       await prometeo.preprocessTransfer(transferRequestPayload);
 
+    log.debug("preprocess transfer response was...", response);
+
     return response.request;
+  }
+
+  async confirmTransfer(
+    userId: number,
+    bankingDirectoryId: number,
+    payload: {
+      request_id: string;
+      authorization_type: string;
+      authorization_data: string;
+      authorization_device_number?: string;
+    },
+    prometeoSessionKey?: string,
+  ): Promise<{
+    message: string;
+    success: boolean;
+  }> {
+    let sessionKey = prometeoSessionKey;
+
+    if (!sessionKey) {
+      log.trace("session key is not provided, doing login...");
+      sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+      log.trace("successfully logged in Prometeo API");
+    }
+
+    const result = await prometeo.confirmTransfer({
+      ...payload,
+      key: sessionKey,
+    });
+
+    return result;
   }
 }

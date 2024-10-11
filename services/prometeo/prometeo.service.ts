@@ -30,6 +30,8 @@ import type {
   PrometeoAPIListBankAccountMovementsResponse,
   PrometeoAPIListInstitutionsForTransfersResponse,
   PrometeoAPIPreprocessTransferResponse,
+  PrometeoAPIConfirmTransferRequestBody,
+  PrometeoAPIConfirmTransferResponse,
 } from "./types/prometeo-api";
 import type { Provider } from "./types/provider";
 import type { Client } from "./types/client";
@@ -813,6 +815,13 @@ export class PrometeoService {
       params.append("destination_owner_name", payload.destination_owner_name);
     }
 
+    if (payload.authorization_device_number) {
+      params.append(
+        "authorization_device_number",
+        payload.authorization_device_number,
+      );
+    }
+
     if (payload.destination_account_type) {
       params.append(
         "destination_account_type",
@@ -860,5 +869,64 @@ export class PrometeoService {
     }
 
     return result.result;
+  }
+
+  async confirmTransfer(
+    payload: PrometeoAPIConfirmTransferRequestBody,
+  ): Promise<{
+    message: string;
+    success: boolean;
+  }> {
+    const url = `${prometeoApiUrl()}/transfer/confirm?key=${payload.key}`;
+
+    const params = new URLSearchParams({
+      request_id: payload.request_id,
+      authorization_type: payload.authorization_type,
+      authorization_data: payload.authorization_data,
+    });
+
+    if (payload.authorization_device_number) {
+      params.append(
+        "authorization_device_number",
+        payload.authorization_device_number,
+      );
+    }
+
+    const requestInit = this.getPrometeoRequestInit("POST", {
+      additionalHeaders: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
+    });
+
+    const response = await fetch(url, requestInit);
+    if (!response.ok) {
+      const text = await response.text();
+      const { status } = response;
+
+      log.error(`request failed with status code ${status}: ${text}`);
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    const result =
+      (await response.json()) as PrometeoAPIConfirmTransferResponse;
+
+    if (result.status === "error") {
+      if (result.message === "Invalid key") {
+        throw ServiceError.sessionKeyInvalidOrExpired;
+      }
+
+      log.error("error listing institutions but cannot be handled yet");
+      log.warn(
+        `response status: ${response.statusText}, response body was ${JSON.stringify(result)}`,
+      );
+
+      throw ServiceError.somethingWentWrong;
+    }
+
+    log.debug("confirm transfer response was...", JSON.stringify(result));
+
+    return result.transfer;
   }
 }

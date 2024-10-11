@@ -3,6 +3,7 @@ import log from "encore.dev/log";
 
 import type { IGetClientsResponse } from "./interfaces/get-clients-response.interface";
 import type {
+  PrometeoAPIConfirmTransferRequestBody,
   PrometeoAPILoginRequestBody,
   PrometeoAPIPreprocessTransferRequestBody,
 } from "./types/prometeo-api";
@@ -22,7 +23,7 @@ import {
   validateLoginPayload,
   validateLogoutPayload,
 } from "./validators/prometeo-api";
-import type { LoginResponse } from "./types/response";
+import type { ConfirmTransferResponse, LoginResponse } from "./types/response";
 import { ServiceError } from "./service-errors";
 
 // Login to the specified provider using the Prometeo API.
@@ -280,6 +281,28 @@ export const preprocessTransfer = api(
       if (error instanceof APIError) throw error;
 
       log.error(error, "unhandled error preprocessing transfer");
+      throw ServiceError.somethingWentWrong;
+    }
+  },
+);
+
+export const confirmTransfer = api(
+  { expose: false },
+  async (
+    payload: PrometeoAPIConfirmTransferRequestBody,
+  ): Promise<ConfirmTransferResponse> => {
+    try {
+      const { prometeoService } = await applicationContext;
+
+      const result = await prometeoService.confirmTransfer(payload);
+
+      return {
+        result,
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "unhandled error confirming transfer");
       throw ServiceError.somethingWentWrong;
     }
   },
