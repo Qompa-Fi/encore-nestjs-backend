@@ -1,5 +1,3 @@
-import type { TransferRequest } from "@/services/prometeo/types/transference";
-
 export interface PreprocessTranferDto {
   origin_account: string;
   destination_account: string;
@@ -11,8 +9,4 @@ export interface PreprocessTranferDto {
   branch?: number;
   currency: string;
   amount: number;
-}
-
-export interface PreprocessTranferResponse {
-  request: TransferRequest;
 }
