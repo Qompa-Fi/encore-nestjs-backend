@@ -20,6 +20,8 @@ import type {
   PreprocessTranferDto,
 } from "./dtos/preprocess-transfer.dto";
 
+// This service allows to configure a directory with credentials to allow
+// Prometeo API to log-in to read and mutate the user's bank accounts.
 export const submitDirectory = api(
   {
     expose: true,
@@ -53,6 +55,11 @@ export const submitDirectory = api(
   },
 );
 
+// List of directories that the user have issued before.
+//
+// If a client wants to gather banking data then it should start with this endpoint
+//  by first selecting a directory and then subsequently performing operations like
+// querying accounts, account movements, performing transfers, etc.
 export const listDirectory = api(
   {
     expose: true,
@@ -82,6 +89,7 @@ export const listDirectory = api(
   },
 );
 
+// List of Prometeo API providers that can be used when issuing a new directory.
 export const listCatalog = api(
   {
     expose: true,
@@ -98,6 +106,13 @@ export const listCatalog = api(
   },
 );
 
+// List of accounts that belongs to the specified directory. Between the returned
+// data there is relevant information like the the currency, number and balance for
+// the corresponding account.
+//
+// Normally the account ID and number will be partially censored but still the ID
+// should be used for subsequent API calls when trying to transfer money, query bank
+// account movements and so on.
 export const listDirectoryAccounts = api(
   {
     expose: true,
@@ -131,6 +146,11 @@ export const listDirectoryAccounts = api(
   },
 );
 
+// Returns a list of movements that happened in an account at the specified date range.
+// The date values must be specified in DD/MM/YYYY format.
+//
+// The parameter for currency is important since it will be used to match an account
+// and then list its movements.
 export const queryDirectoryAccountMovements = api(
   {
     expose: true,
@@ -187,6 +207,10 @@ export const queryDirectoryAccountMovements = api(
   },
 );
 
+// List of institutions that the client should use when trying to transfer money.
+//
+// Normally a user might need to select an institution when they want to transfer
+// money using an account number or CCI.
 export const listDirectoryInstitutions = api(
   {
     expose: true,
@@ -217,6 +241,12 @@ export const listDirectoryInstitutions = api(
   },
 );
 
+// Prepare a transfer request. The `request_id` field must be supplied in the next API call to
+// `banking.ConfirmTransfer` to as you can infer, to confirm the transfer.
+//
+//
+// Other use case can also be to use it confirm that the user-specified
+// transaction information is correct since the user might need to perform a confirmation step.
 export const requestTransfer = api(
   {
     expose: true,
@@ -258,6 +288,8 @@ export const requestTransfer = api(
   },
 );
 
+// After requesting a transfer, the user must validate its identity and confirm
+// the transfer with this endpoint.
 export const confirmTransfer = api(
   {
     expose: true,

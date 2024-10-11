@@ -29,6 +29,7 @@ export interface QueryAccountMovementsResponse {
 }
 
 export interface ListDirectoryInstitutionsResponse {
+  // The list of institutions that the user should use when trying to specify an account number or CCI.
   data: BankingInstitution[];
 }
 
