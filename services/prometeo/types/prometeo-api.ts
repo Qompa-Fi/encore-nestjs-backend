@@ -220,6 +220,7 @@ export type PrometeoAPIPreprocessTransferRequestBody =
     destination_owner_name?: string;
     // Optional if not applicable. Type of target account.
     destination_account_type?: string;
+    authorization_device_number?: string;
     // The concept under this amount will be transferred.
     concept: string;
     // Optional if not applicable. The branch number of the destination account.
@@ -285,6 +286,7 @@ export interface PrometeoAPIConfirmTransferRequestBody {
   authorization_data: string;
   // ! careful if 'authorization_device_number' was required in preprocess
   // 'authorization_device_number': transfer_data['authorization_device_number']
+  authorization_device_number?: string;
 }
 
 export interface PrometeoAPIConfirmTransferSuccessfulResponse {

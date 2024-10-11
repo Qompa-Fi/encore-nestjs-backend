@@ -484,6 +484,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       request_id: string;
       authorization_type: string;
       authorization_data: string;
+      authorization_device_number?: string;
     },
     prometeoSessionKey?: string,
   ): Promise<{

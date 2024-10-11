@@ -6,6 +6,7 @@ export interface PreprocessTranferDto {
   destination_institution: number;
   destination_owner_name?: string;
   destination_account_type?: string;
+  authorization_device_number?: string;
   concept: string;
   branch?: number;
   currency: string;

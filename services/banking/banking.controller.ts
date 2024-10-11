@@ -294,6 +294,7 @@ export const confirmTransfer = api(
     request_id: string;
     authorization_type: string;
     authorization_data: string;
+    authorization_device_number?: string;
   }): Promise<{
     result: {
       message: string;

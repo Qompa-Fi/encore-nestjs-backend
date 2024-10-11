@@ -815,6 +815,13 @@ export class PrometeoService {
       params.append("destination_owner_name", payload.destination_owner_name);
     }
 
+    if (payload.authorization_device_number) {
+      params.append(
+        "authorization_device_number",
+        payload.authorization_device_number,
+      );
+    }
+
     if (payload.destination_account_type) {
       params.append(
         "destination_account_type",
@@ -872,11 +879,24 @@ export class PrometeoService {
   }> {
     const url = `${prometeoApiUrl()}/transfer/confirm?key=${payload.key}`;
 
+    const params = new URLSearchParams({
+      request_id: payload.request_id,
+      authorization_type: payload.authorization_type,
+      authorization_data: payload.authorization_data,
+    });
+
+    if (payload.authorization_device_number) {
+      params.append(
+        "authorization_device_number",
+        payload.authorization_device_number,
+      );
+    }
+
     const requestInit = this.getPrometeoRequestInit("POST", {
       additionalHeaders: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({ ...payload }),
+      body: params,
     });
 
     const response = await fetch(url, requestInit);
