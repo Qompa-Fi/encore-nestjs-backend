@@ -257,6 +257,8 @@ export const requestTransfer = api(
 
     const directoryId = payload.id;
 
+    log.debug("directory ID is...", directoryId);
+
     const request = await bankingService.preprocessTransfer(
       userId,
       directoryId,

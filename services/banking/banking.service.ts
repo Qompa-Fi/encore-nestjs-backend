@@ -456,7 +456,9 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     let sessionKey = prometeoSessionKey;
 
     if (!prometeoSessionKey) {
+      log.trace("session key is not provided, doing login...");
       sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
+      log.trace("successfully logged in Prometeo API");
     }
 
     const transferRequestPayload = {
@@ -466,6 +468,8 @@ export class BankingService extends PrismaClient implements OnModuleInit {
 
     const response: { request: TransferRequest } =
       await prometeo.preprocessTransfer(transferRequestPayload);
+
+    log.debug("preprocess transfer response was...", response);
 
     return response.request;
   }
