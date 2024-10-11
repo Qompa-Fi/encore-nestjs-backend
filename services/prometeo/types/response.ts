@@ -19,3 +19,10 @@ export interface LoginResponse {
 }
 
 export type GetClientsResponse = IGetClientsResponse;
+
+export interface ConfirmTransferResponse {
+  result: {
+    message: string;
+    success: boolean;
+  };
+}
