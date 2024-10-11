@@ -1,22 +1,6 @@
 import type { UserBankAccount, UserBankAccountMovement } from "./user-account";
 import type { BankingInstitution } from "./institution";
 import type { TransferRequest } from "./transference";
-import type { Header } from "encore.dev/api";
-
-export interface PrometeoAPILoginRequestBody {
-  // The provider to login to.
-  provider: string;
-  // The "access key ID" to use for the login.
-  username: string;
-  // The "access key secret" to use for the login.
-  password: string;
-  // Optional. The type of account or document (this will vary depending on the provider).
-  type?: string;
-  // Optional. The document number (this will vary depending on the provider and account type).
-  document_number?: string;
-  // Optional. The OTP code to use for the login if the provider required it in a previous call.
-  otp?: string;
-}
 
 export interface PrometeoAPIGenericErrorResponse {
   status: "error";
@@ -58,6 +42,21 @@ export interface PrometeoAPIErrorAPIKeyNotFoundResponse {
  * Login
  * https://docs.prometeoapi.com/reference/login
  */
+export interface PrometeoAPILoginParams {
+  // The provider to login to.
+  provider: string;
+  // The "access key ID" to use for the login.
+  username: string;
+  // The "access key secret" to use for the login.
+  password: string;
+  // Optional. The type of account or document (this will vary depending on the provider).
+  type?: string;
+  // Optional. The document number (this will vary depending on the provider and account type).
+  document_number?: string;
+  // Optional. The OTP code to use for the login if the provider required it in a previous call.
+  otp?: string;
+}
+
 export interface PrometeoAPISuccessfulLoginResponse {
   status: "logged_in";
   key: string;

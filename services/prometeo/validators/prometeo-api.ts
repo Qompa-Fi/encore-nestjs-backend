@@ -4,7 +4,7 @@ import { isMatch } from "date-fns";
 import type {
   PrometeoAPIGetClientsPayload,
   PrometeoAPIListBankAccountMovementsPayload,
-  PrometeoAPILoginRequestBody,
+  PrometeoAPILoginParams,
 } from "../types/prometeo-api";
 
 const checkNonEmptyString = (
@@ -68,7 +68,7 @@ export const validateListBankAccountsPayload = (payload: { key: string }):
 
 // https://docs.prometeoapi.com/reference/login
 export const validateLoginPayload = (
-  payload: PrometeoAPILoginRequestBody,
+  payload: PrometeoAPILoginParams,
   validProviders: string[],
 ): APIError | undefined => {
   let error = checkNonEmptyString("provider", payload.provider, 3, 255);

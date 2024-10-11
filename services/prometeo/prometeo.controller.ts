@@ -1,20 +1,7 @@
-import { api, APIError, type Header } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import type { IGetClientsResponse } from "./interfaces/get-clients-response.interface";
-import type {
-  PrometeoAPIConfirmTransferRequestBody,
-  PrometeoAPILoginRequestBody,
-  PrometeoAPIPreprocessTransferRequestBody,
-} from "./types/prometeo-api";
-import type { BankingInstitution } from "./types/institution";
-import type { TransferRequest } from "./types/transference";
-import type {
-  UserBankAccount,
-  UserBankAccountMovement,
-} from "./types/user-account";
 import applicationContext from "../applicationContext";
-import type { Provider } from "./types/provider";
 import {
   validateListBankAccountMovementsPayload,
   validateListBankAccountsPayload,
@@ -23,13 +10,35 @@ import {
   validateLoginPayload,
   validateLogoutPayload,
 } from "./validators/prometeo-api";
-import type { ConfirmTransferResponse, LoginResponse } from "./types/response";
+import type {
+  ListInstitutionsForTransfersResponse,
+  QueryBankAccountMovementsResponse,
+  PreprocessTransferResponse,
+  ListBankAccountsResponse,
+  ConfirmTransferResponse,
+  ListProvidersResponse,
+  ConfirmTransferParams,
+  SelectClientResponse,
+  ListClientsResponse,
+  LogoutResponse,
+  LoginResponse,
+} from "./types/response";
+import type {
+  QueryBankAccountMovementsParams,
+  ListInstitutionsForTransfersParams,
+  PreprocessTransferParams,
+  ListBankAccountsParams,
+  SelectClientParams,
+  ListClientsParams,
+  LogoutParams,
+  LoginParams,
+} from "./types/request";
 import { ServiceError } from "./service-errors";
 
 // Login to the specified provider using the Prometeo API.
-export const login = api(
+export const login = api<LoginParams>(
   { expose: false },
-  async (payload: PrometeoAPILoginRequestBody): Promise<LoginResponse> => {
+  async (payload): Promise<LoginResponse> => {
     log.debug(
       `'${payload.username}' is logging in to Prometeo API using provider '${payload.provider}'...`,
     );
@@ -61,15 +70,9 @@ export const login = api(
 );
 
 // Exits the session specified in the headers.
-export const logout = api(
+export const logout = api<LogoutParams>(
   { expose: false },
-  async (payload: {
-    // The session key to be passed to the Prometeo API.
-    key: Header<"X-Prometeo-Session-Key">;
-  }): Promise<{
-    // Whether the logout was successful or not.
-    success: boolean;
-  }> => {
+  async (payload): Promise<LogoutResponse> => {
     const apiError = validateLogoutPayload(payload);
     if (apiError) throw apiError;
 
@@ -82,26 +85,11 @@ export const logout = api(
 );
 
 // Endpoint to query movements of a user account in a given currency and date range.
-export const queryBankAccountMovements = api(
+export const queryBankAccountMovements = api<QueryBankAccountMovementsParams>(
   {
     expose: false,
   },
-  async (payload: {
-    // The session key to be passed to the Prometeo API.
-    key: Header<"X-Prometeo-Session-Key">;
-    // The account to query. See '/third-party/prometeo/accounts' to retrieve a list of accounts
-    // in the current provider and/or client.
-    account_number: string;
-    // The currency that the account is denominated in.
-    currency: string;
-    // The date in 'dd/mm/yyyy' format from which to start querying movements.
-    start_date: string;
-    // The date in 'dd/mm/yyyy' format until which to query movements.
-    end_date: string;
-  }): Promise<{
-    // An array containing all the movements that the specified account has made in the specified currency.
-    data: UserBankAccountMovement[];
-  }> => {
+  async (payload): Promise<QueryBankAccountMovementsResponse> => {
     log.debug(
       `retrieving movements from bank account ${payload.account_number}(${payload.currency}) from ${payload.start_date} to ${payload.end_date}...`,
     );
@@ -122,10 +110,7 @@ export const queryBankAccountMovements = api(
 // List all the providers that the Prometeo API supports.
 export const listProviders = api(
   { expose: false },
-  async (): Promise<{
-    // An array with all the providers that the Prometeo API supports.
-    data: Provider[];
-  }> => {
+  async (): Promise<ListProvidersResponse> => {
     const { prometeoService } = await applicationContext;
 
     log.debug("retrieving providers...");
@@ -140,12 +125,9 @@ export const listProviders = api(
 
 // List all the clients that the current user has access to. Those clients changes
 // depending on the previously specified provider at endpoint to login.
-export const listClients = api(
+export const listClients = api<ListClientsParams>(
   { expose: false },
-  async (payload: {
-    // The session key to be passed to the Prometeo API.
-    key: Header<"X-Prometeo-Session-Key">;
-  }): Promise<IGetClientsResponse> => {
+  async (payload): Promise<ListClientsResponse> => {
     const { prometeoService } = await applicationContext;
 
     const apiError = validateGetClientsPayload(payload);
@@ -159,15 +141,9 @@ export const listClients = api(
 
 // List all the accounts that the specified session key has access to.
 // Those accounts will vary depending on the specified provider and/or client.
-export const listBankAccounts = api(
+export const listBankAccounts = api<ListBankAccountsParams>(
   { expose: false },
-  async (payload: {
-    // The session key to be passed to the Prometeo API.
-    key: Header<"X-Prometeo-Session-Key">;
-  }): Promise<{
-    // An array containing all the accounts that the specified session key has access to.
-    data: UserBankAccount[];
-  }> => {
+  async (payload): Promise<ListBankAccountsResponse> => {
     const apiError = validateListBankAccountsPayload(payload);
     if (apiError) throw apiError;
 
@@ -184,21 +160,11 @@ export const listBankAccounts = api(
 //
 // If the key requires to specify a client, it will keep in standby for
 // some minutes until the client is selected.
-export const selectClient = api(
+export const selectClient = api<SelectClientParams>(
   {
     expose: false,
   },
-  async (payload: {
-    // The session key to be passed to the Prometeo API. This is
-    // a key that is supposed to be waiting for this operation.
-    key: Header<"X-Prometeo-Session-Key">;
-    // The ID of the client to use for the current session.
-    client: string;
-  }): Promise<{
-    // The session key to be passed to the Prometeo API. This key
-    // might change in certain providers so the previous is invalidated.
-    key: string;
-  }> => {
+  async (payload): Promise<SelectClientResponse> => {
     const { prometeoService } = await applicationContext;
 
     const clients = await prometeoService.getClients({ key: payload.key });
@@ -231,44 +197,37 @@ export const selectClient = api(
 //
 // This Prometeo API endpoint is implemented based on their API reference:
 // https://docs.prometeoapi.com/reference/gettransferdestinations
-export const listInstitutionsForTransfers = api(
-  { expose: false },
-  async (payload: {
-    // The session key to be passed to the Prometeo API.
-    key: Header<"X-Prometeo-Session-Key">;
-  }): Promise<{
-    // An array(originally destinations) containing all the institutions that the specified session key has access to.
-    data: BankingInstitution[];
-  }> => {
-    const { prometeoService } = await applicationContext;
+export const listInstitutionsForTransfers =
+  api<ListInstitutionsForTransfersParams>(
+    { expose: false },
+    async (payload): Promise<ListInstitutionsForTransfersResponse> => {
+      const { prometeoService } = await applicationContext;
 
-    try {
-      const institutions = await prometeoService.listInstitutionsForTransfers({
-        key: payload.key,
-      });
+      try {
+        const institutions = await prometeoService.listInstitutionsForTransfers(
+          {
+            key: payload.key,
+          },
+        );
 
-      return {
-        data: institutions,
-      };
-    } catch (error) {
-      if (error instanceof APIError) throw error;
+        return {
+          data: institutions,
+        };
+      } catch (error) {
+        if (error instanceof APIError) throw error;
 
-      log.error(error, "unhandled error listing institutions for transfers");
+        log.error(error, "unhandled error listing institutions for transfers");
 
-      throw ServiceError.somethingWentWrong;
-    }
-  },
-);
+        throw ServiceError.somethingWentWrong;
+      }
+    },
+  );
 
-export const preprocessTransfer = api(
+export const preprocessTransfer = api<PreprocessTransferParams>(
   {
     expose: false,
   },
-  async (
-    payload: PrometeoAPIPreprocessTransferRequestBody,
-  ): Promise<{
-    request: TransferRequest;
-  }> => {
+  async (payload): Promise<PreprocessTransferResponse> => {
     try {
       const { prometeoService } = await applicationContext;
 
@@ -286,11 +245,9 @@ export const preprocessTransfer = api(
   },
 );
 
-export const confirmTransfer = api(
+export const confirmTransfer = api<ConfirmTransferParams>(
   { expose: false },
-  async (
-    payload: PrometeoAPIConfirmTransferRequestBody,
-  ): Promise<ConfirmTransferResponse> => {
+  async (payload): Promise<ConfirmTransferResponse> => {
     try {
       const { prometeoService } = await applicationContext;
 
