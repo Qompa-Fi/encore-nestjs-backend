@@ -1,4 +1,8 @@
-import type { UserBankAccount } from "@/services/prometeo/types/user-account";
+import type { BankingInstitution } from "@/services/prometeo/types/institution";
+import type {
+  UserBankAccountMovement,
+  UserBankAccount,
+} from "@/services/prometeo/types/user-account";
 
 interface ExportableDirectory {
   id: number;
@@ -8,14 +12,29 @@ interface ExportableDirectory {
   updated_at: string | null;
 }
 
-export interface SetupProviderAccessResponse {
+export interface SetupDirectoryResponse {
   directory: ExportableDirectory;
 }
 
-export interface ListConfiguredProviderAccessResponse {
+export interface ListDirectoriesResponse {
   data: ExportableDirectory[];
 }
 
 export interface ListDirectoryAccountsResponse {
   data: UserBankAccount[];
+}
+
+export interface QueryAccountMovementsResponse {
+  data: UserBankAccountMovement[];
+}
+
+export interface ListDirectoryInstitutionsResponse {
+  data: BankingInstitution[];
+}
+
+export interface ConfirmTransferResponse {
+  result: {
+    message: string;
+    success: boolean;
+  };
 }

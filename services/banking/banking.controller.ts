@@ -2,18 +2,18 @@ import { prometeo } from "~encore/clients";
 import { api, APIError, type Query } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import type { PrometeoAPIConfirmTransferRequestBody } from "../prometeo/types/prometeo-api";
-import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
-import type { UserBankAccountMovement } from "../prometeo/types/user-account";
-import type { BankingInstitution } from "../prometeo/types/institution";
 import type { Provider } from "@/services/prometeo/types/provider";
+import type { ISetupDirectory } from "./dtos/setup-directory.dto";
 import { mayGetInternalUserIdFromAuthData } from "@/lib/clerk";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
 import type {
-  ListConfiguredProviderAccessResponse,
+  ListDirectoryInstitutionsResponse,
+  QueryAccountMovementsResponse,
   ListDirectoryAccountsResponse,
-  SetupProviderAccessResponse,
+  ConfirmTransferResponse,
+  ListDirectoriesResponse,
+  SetupDirectoryResponse,
 } from "./types/response";
 import type {
   PreprocessTranferResponse,
@@ -27,32 +27,27 @@ export const submitDirectory = api(
     path: "/banking/directory",
     auth: true,
   },
-  async (
-    payload: ISetupProviderAccessInputDto,
-  ): Promise<SetupProviderAccessResponse> => {
+  async (payload: ISetupDirectory): Promise<SetupDirectoryResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
     }
 
     log.debug(
-      `received request to setup a provider from user with clerk id '${userId}'...`,
+      `received request to 'setup a directory' from user with clerk id '${userId}'...`,
     );
 
     const { bankingService } = await applicationContext;
 
-    const result = await bankingService.setupPrometeoProviderAccess(
-      userId,
-      payload,
-    );
+    const result = await bankingService.setupDirectory(userId, payload);
 
     return {
       directory: {
         id: result.id,
         name: result.name,
         provider_name: result.providerName,
-        created_at: result.createdAt,
-        updated_at: result.updatedAt,
+        created_at: result.createdAt.toISOString(),
+        updated_at: result.updatedAt ? result.updatedAt.toISOString() : null,
       },
     };
   },
@@ -65,7 +60,7 @@ export const listDirectory = api(
     path: "/banking/directory",
     auth: true,
   },
-  async (): Promise<ListConfiguredProviderAccessResponse> => {
+  async (): Promise<ListDirectoriesResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -73,7 +68,7 @@ export const listDirectory = api(
 
     const { bankingService } = await applicationContext;
 
-    const results = await bankingService.listConfiguredProviderAccess(userId);
+    const results = await bankingService.listDirectories(userId);
 
     return {
       data: results.map((r) => ({
@@ -149,9 +144,7 @@ export const queryDirectoryAccountMovements = api(
     currency: Query<string>;
     start_date: Query<string>;
     end_date: Query<string>;
-  }): Promise<{
-    data: UserBankAccountMovement[];
-  }> => {
+  }): Promise<QueryAccountMovementsResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -194,16 +187,16 @@ export const queryDirectoryAccountMovements = api(
   },
 );
 
-export const listInstitutionsForTransfers = api(
+export const listDirectoryInstitutions = api(
   {
     expose: true,
     method: "GET",
     path: "/banking/directory/:id/institutions",
     auth: true,
   },
-  async (payload: { id: number }): Promise<{
-    data: BankingInstitution[];
-  }> => {
+  async (payload: {
+    id: number;
+  }): Promise<ListDirectoryInstitutionsResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -245,23 +238,19 @@ export const requestTransfer = api(
 
     const directoryId = payload.id;
 
-    log.debug("directory ID is...", directoryId);
+    log.debug("specified directory ID is...", directoryId);
 
-    const request = await bankingService.preprocessTransfer(
-      userId,
-      directoryId,
-      {
-        concept: payload.concept,
-        branch: payload.branch,
-        currency: payload.currency,
-        amount: payload.amount,
-        origin_account: payload.origin_account,
-        destination_account: payload.destination_account,
-        destination_institution: payload.destination_institution,
-        destination_owner_name: payload.destination_owner_name,
-        destination_account_type: payload.destination_account_type,
-      },
-    );
+    const request = await bankingService.requestTransfer(userId, directoryId, {
+      concept: payload.concept,
+      branch: payload.branch,
+      currency: payload.currency,
+      amount: payload.amount,
+      origin_account: payload.origin_account,
+      destination_account: payload.destination_account,
+      destination_institution: payload.destination_institution,
+      destination_owner_name: payload.destination_owner_name,
+      destination_account_type: payload.destination_account_type,
+    });
 
     return {
       request,
@@ -282,12 +271,7 @@ export const confirmTransfer = api(
     authorization_type: string;
     authorization_data: string;
     authorization_device_number?: string;
-  }): Promise<{
-    result: {
-      message: string;
-      success: boolean;
-    };
-  }> => {
+  }): Promise<ConfirmTransferResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
