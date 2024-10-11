@@ -6,13 +6,10 @@ import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 import Redis from "ioredis";
 
-import { validatePrometeoProviderAccessInputs } from "./validators/setup-provider-access";
+import { validateSetupDirectoryInputs } from "./validators/request";
 import type { BankingDirectoryWithoutCredentials } from "./types/banking-directory";
-import type {
-  PrometeoAPIConfirmTransferRequestBody,
-  PrometeoAPILoginRequestBody,
-} from "../prometeo/types/prometeo-api";
-import type { ISetupProviderAccessInputDto } from "./dtos/setup-provider.dto";
+import type { PrometeoAPILoginRequestBody } from "../prometeo/types/prometeo-api";
+import type { SetupDirectoryParams } from "./types/request";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
 import type {
   UserBankAccount,
@@ -85,9 +82,9 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async setupPrometeoProviderAccess(
+  async setupDirectory(
     userId: number,
-    inputs: ISetupProviderAccessInputDto,
+    inputs: SetupDirectoryParams,
   ): Promise<BankingDirectoryWithoutCredentials> {
     const providers = await this.getPrometeoProviders();
 
@@ -115,10 +112,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
         `specified provider is '${name}' - ${bank.name} [${bank.code}]...`,
       );
 
-      const apiError = validatePrometeoProviderAccessInputs(
-        inputs,
-        selectedProvider,
-      );
+      const apiError = validateSetupDirectoryInputs(inputs, selectedProvider);
       if (apiError) throw apiError;
     }
 
@@ -219,8 +213,8 @@ export class BankingService extends PrismaClient implements OnModuleInit {
         id: result.id,
         name: result.name,
         providerName: result.providerName,
-        createdAt: result.createdAt.toISOString(),
-        updatedAt: result.updatedAt?.toISOString() ?? null,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
       };
     } catch (error) {
       log.error("error while saving provider credentials", error);
@@ -229,15 +223,9 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async listConfiguredProviderAccess(userId: number): Promise<
-    {
-      id: number;
-      name: string | null;
-      providerName: string;
-      createdAt: Date;
-      updatedAt: Date | null;
-    }[]
-  > {
+  async listDirectories(
+    userId: number,
+  ): Promise<BankingDirectoryWithoutCredentials[]> {
     const results = await this.bankingDirectory.findMany({
       select: {
         id: true,
@@ -450,7 +438,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     return response.data;
   }
 
-  async preprocessTransfer(
+  async requestTransfer(
     userId: number,
     bankingDirectoryId: number,
     payload: PreprocessTranferDto,

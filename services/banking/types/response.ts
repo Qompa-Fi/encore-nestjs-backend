@@ -1,4 +1,9 @@
-import type { UserBankAccount } from "@/services/prometeo/types/user-account";
+import type { BankingInstitution } from "@/services/prometeo/types/institution";
+import type { Provider } from "@/services/prometeo/types/provider";
+import type {
+  UserBankAccountMovement,
+  UserBankAccount,
+} from "@/services/prometeo/types/user-account";
 
 interface ExportableDirectory {
   id: number;
@@ -8,14 +13,34 @@ interface ExportableDirectory {
   updated_at: string | null;
 }
 
-export interface SetupProviderAccessResponse {
+export interface SetupDirectoryResponse {
   directory: ExportableDirectory;
 }
 
-export interface ListConfiguredProviderAccessResponse {
+export interface ListDirectoriesResponse {
   data: ExportableDirectory[];
 }
 
 export interface ListDirectoryAccountsResponse {
   data: UserBankAccount[];
+}
+
+export interface QueryAccountMovementsResponse {
+  data: UserBankAccountMovement[];
+}
+
+export interface ListDirectoryInstitutionsResponse {
+  // The list of institutions that the user should use when trying to specify an account number or CCI.
+  data: BankingInstitution[];
+}
+
+export interface ConfirmTransferResponse {
+  result: {
+    message: string;
+    success: boolean;
+  };
+}
+
+export interface ListCatalogResponse {
+  data: Provider[];
 }
