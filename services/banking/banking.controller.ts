@@ -20,19 +20,6 @@ import type {
   PreprocessTranferDto,
 } from "./dtos/preprocess-transfer.dto";
 
-/**
- * We mainly need two things:
- * - Bank account number (would vary depending on the bank)
- * - Banking credentials (will vary depending on the bank)
- *
- * Only the final digits of the account number, the alias and the provider should
- * be exposed to the user.
- *
- * We need a mechanism to notify the users about the status of their account linking.
- *
- * So if the case above happens, some services might be inactive until the user re-issues its accounts.
- */
-
 export const submitDirectory = api(
   {
     expose: true,
