@@ -8,7 +8,7 @@ import Redis from "ioredis";
 
 import { validateSetupDirectoryInputs } from "./validators/request";
 import type { BankingDirectoryWithoutCredentials } from "./types/banking-directory";
-import type { PrometeoAPILoginRequestBody } from "../prometeo/types/prometeo-api";
+import type { PrometeoAPILoginParams } from "../prometeo/types/prometeo-api";
 import type { SetupDirectoryParams } from "./types/request";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
 import type {
@@ -347,7 +347,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     const credentials =
       await this.decryptProviderCredentials(encryptedCredentials);
 
-    const loginPayload: PrometeoAPILoginRequestBody = {
+    const loginPayload: PrometeoAPILoginParams = {
       username: credentials.username,
       password: credentials.password,
       provider: providerName,

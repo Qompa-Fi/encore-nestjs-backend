@@ -22,7 +22,7 @@ import type {
   PrometeoAPIErrorLoginResponse,
   PrometeoAPIGetClientsResponse,
   PrometeoAPIGetClientsPayload,
-  PrometeoAPILoginRequestBody,
+  PrometeoAPILoginParams,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
   PrometeoAPISelectClientResponse,
@@ -240,7 +240,7 @@ export class PrometeoService {
   }
 
   private async doLogin(
-    payload: PrometeoAPILoginRequestBody,
+    payload: PrometeoAPILoginParams,
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<PrometeoAPILoginResponse> {
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
@@ -308,7 +308,7 @@ export class PrometeoService {
   }
 
   async login(
-    payload: PrometeoAPILoginRequestBody,
+    payload: PrometeoAPILoginParams,
     config?: PrometeoRequestConfig,
   ): Promise<LoginResponse> {
     const result = await this.doLogin(payload, config);
