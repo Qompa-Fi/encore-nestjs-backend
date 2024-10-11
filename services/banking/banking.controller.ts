@@ -10,6 +10,7 @@ import type {
   ListDirectoryInstitutionsResponse,
   QueryAccountMovementsResponse,
   ListDirectoryAccountsResponse,
+  PreprocessTranferResponse,
   ConfirmTransferResponse,
   ListDirectoriesResponse,
   SetupDirectoryResponse,
@@ -23,7 +24,6 @@ import type {
   RequestTransferParams,
   SetupDirectoryParams,
 } from "./types/request";
-import type { PreprocessTranferResponse } from "./dtos/preprocess-transfer.dto";
 
 // This service allows to configure a directory with credentials to allow
 // Prometeo API to log-in to read and mutate the user's bank accounts.
