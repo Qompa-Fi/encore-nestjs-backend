@@ -6,10 +6,12 @@ import { AuthModule } from "./auth/auth.module";
 import { SecurityModule } from "./security/security.module";
 import { PrometeoModule } from "./prometeo/prometeo.module";
 import { BankingModule } from "./banking/banking.module";
+import { ThirdPartyModule } from "./third-party/third-part.module";
 
 @Module({
   imports: [
     OrganizationsModule,
+    ThirdPartyModule,
     BankingModule,
     PrometeoModule,
     SecurityModule,
