@@ -1,24 +1,10 @@
-import { api, APIError } from "encore.dev/api";
+import { api } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 
 import type { NewTruoraIdentityVerificationResponse } from "./types/response";
-import type { AuthenticatedUser } from "../auth/interfaces/clerk.interface";
-import { QOMPA_INTERNAL_USER_ID_KEY } from "../auth/auth";
+import { mustGetUserIdFromPublicMetadata } from "@/lib/clerk";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
-
-const mustGetUserIdFromPublicMetadata = (
-  authenticatedUser: AuthenticatedUser,
-): number => {
-  const userId = authenticatedUser.metadata.publicMetadata[
-    QOMPA_INTERNAL_USER_ID_KEY
-  ] as number | undefined;
-  if (!userId) {
-    throw APIError.notFound("you should create your user first");
-  }
-
-  return userId;
-};
 
 // Every registered user must succeed the Truora's identity verification so ensure
 // to claim a key in this endpoint and use it in "https://identity.truora.com".
