@@ -1,10 +1,50 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 
-import type { NewTruoraIdentityVerificationResponse } from "./types/response";
-import { mustGetUserIdFromPublicMetadata } from "@/lib/clerk";
+import type {
+  GetTruoraProcessResultResponse,
+  NewTruoraIdentityVerificationResponse,
+} from "./types/response";
+import type { GetTruoraProcessResultParams } from "./types/request";
+import {
+  mayGetInternalUserIdFromAuthData,
+  mustGetUserIdFromPublicMetadata,
+} from "@/lib/clerk";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
+
+export const getTruoraProcessResult = api<GetTruoraProcessResultParams>(
+  {
+    expose: true,
+    method: "GET",
+    path: "/third-party/truora/process-result/:process_id",
+    auth: true,
+  },
+  async (payload): Promise<GetTruoraProcessResultResponse> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.somethingWentWrong;
+    }
+
+    const { truoraService } = await applicationContext;
+
+    const { result } = await truoraService.getProcessResult(payload.process_id);
+
+    if (result.account_id !== userId.toString()) {
+      throw APIError.aborted(
+        "you are not authorized to access this process result",
+      );
+    }
+
+    return {
+      process_result: {
+        declined_reason: result.declined_reason,
+        process_id: result.process_id,
+        status: result.status,
+      },
+    };
+  },
+);
 
 // Every registered user must succeed the Truora's identity verification so ensure
 // to claim a key in this endpoint and use it in "https://identity.truora.com".

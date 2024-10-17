@@ -1,15 +1,37 @@
 import { Injectable } from "@nestjs/common";
 import { secret } from "encore.dev/config";
 
+import type { TruoraCreateApiKeyParams } from "./types/truora/request";
+import type { ProcessResult } from "./types/truora/process";
 import type {
   TruoraSuccessCreateApiKeyResponse,
-  TruoraCreateApiKeyParams,
+  TruoraSuccessGetProcessResultResponse,
 } from "./types/truora/response";
 
 const truoraApiKey = secret("TruoraAPIKey");
 
 @Injectable()
 export class TruoraService {
+  async getProcessResult(
+    truoraProcessId: string,
+  ): Promise<TruoraSuccessGetProcessResultResponse> {
+    const response = await fetch(
+      `https://api.identity.truora.com/v1/processes/${truoraProcessId}/result`,
+      {
+        headers: {
+          "Truora-API-Key": truoraApiKey(),
+          Accept: "application/json",
+        },
+      },
+    );
+
+    const result = (await response.json()) as ProcessResult;
+
+    return {
+      result,
+    };
+  }
+
   async createApiKey(
     payload: TruoraCreateApiKeyParams,
   ): Promise<TruoraSuccessCreateApiKeyResponse> {
