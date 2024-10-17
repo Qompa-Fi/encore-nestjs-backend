@@ -4,7 +4,7 @@ import type {
 } from "./prometeo-api";
 import type { Header } from "encore.dev/api";
 
-interface PrometeoSessionKeyHeader {
+export interface PrometeoSessionKeyHeader {
   // The session key to be passed to the Prometeo API.
   key: Header<"X-Prometeo-Session-Key">;
 }
