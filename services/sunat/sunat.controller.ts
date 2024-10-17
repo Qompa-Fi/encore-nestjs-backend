@@ -2,32 +2,17 @@ import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import type { ISunatProfileResponse } from "./dtos/sunat-profile-response.dto";
-import type { AuthenticatedUser } from "../auth/interfaces/clerk.interface";
+import { mustGetAuthData, mustGetUserIdFromPublicMetadata } from "@/lib/clerk";
 import type { SearchDNIResponseDto } from "./dtos/search-by-dni.dto";
 import type { SearchRUCResponseDto } from "./dtos/search-by-ruc.dto";
 import { toSerializableSunatProfile } from "./helpers/serializable";
 import type { GetRubrosDto } from "./dtos/get-rubros.dto";
-import { QOMPA_INTERNAL_USER_ID_KEY } from "../auth/auth";
 import applicationContext from "../applicationContext";
-import { mustGetAuthData } from "@/lib/clerk";
 import { checkRuc } from "@/lib/sunat";
 import {
   checkSaveSunatProfileDto,
   type ISaveSunatProfileDto,
 } from "./dtos/save-sunat-profile.dto";
-
-const mustGetUserIdFromPublicMetadata = (
-  authenticatedUser: AuthenticatedUser,
-): number => {
-  const userId = authenticatedUser.metadata.publicMetadata[
-    QOMPA_INTERNAL_USER_ID_KEY
-  ] as number | undefined;
-  if (!userId) {
-    throw APIError.notFound("you should create your user first");
-  }
-
-  return userId;
-};
 
 export const searchByDNI = api(
   { expose: true, method: "GET", path: "/sunat/search-by-dni/:dni" },

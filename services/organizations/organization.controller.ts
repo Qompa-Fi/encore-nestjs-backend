@@ -1,32 +1,15 @@
 import { api, APIError } from "encore.dev/api";
-import { sunat } from "~encore/clients";
+import log from "encore.dev/log";
 
 import type { SerializableOrganization } from "./interfaces/serializable-organization.interface";
-import type { AuthenticatedUser } from "../auth/interfaces/clerk.interface";
-import type { IRubro } from "@/services/sunat/interfaces/rubro.interface";
+import { mustGetAuthData, mustGetUserIdFromPublicMetadata } from "@/lib/clerk";
 import { toSerializableOrganization } from "./helpers/serializable";
-import { QOMPA_INTERNAL_USER_ID_KEY } from "../auth/auth";
+import applicationContext from "../applicationContext";
+import { ServiceError } from "./service-errors";
 import {
   checkCreateOrganizationDto,
   type ICreateOrganizationDto,
 } from "./dtos/create-organization.dto";
-import applicationContext from "../applicationContext";
-import { mustGetAuthData } from "@/lib/clerk";
-import log from "encore.dev/log";
-import { ServiceError } from "./service-errors";
-
-const mustGetUserIdFromPublicMetadata = (
-  authenticatedUser: AuthenticatedUser,
-): number => {
-  const userId = authenticatedUser.metadata.publicMetadata[
-    QOMPA_INTERNAL_USER_ID_KEY
-  ] as number | undefined;
-  if (!userId) {
-    throw APIError.notFound("you should create your user first");
-  }
-
-  return userId;
-};
 
 export const getOrganizations = api(
   { expose: true, method: "GET", path: "/organizations", auth: true },
