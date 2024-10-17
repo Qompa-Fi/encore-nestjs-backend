@@ -82,6 +82,39 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
+  async renameDirectory(
+    userId: number,
+    directoryId: number,
+    newName: string | null,
+  ): Promise<BankingDirectoryWithoutCredentials> {
+    if (newName) {
+      if (newName.length < 4) {
+        throw ServiceError.nameMustBeMoreThan4Chars;
+      }
+
+      if (newName.length > 90) {
+        throw ServiceError.nameMustBeLessEqThan90Chars;
+      }
+    }
+
+    return await this.bankingDirectory.update({
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        providerName: true,
+      },
+      where: {
+        userId,
+        id: directoryId,
+      },
+      data: {
+        name: newName,
+      },
+    });
+  }
+
   async submitDirectory(
     userId: number,
     inputs: SubmitDirectoryParams,

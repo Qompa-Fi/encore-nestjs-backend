@@ -15,6 +15,7 @@ import type {
   ListDirectoriesResponse,
   SubmitDirectoryResponse,
   ListCatalogResponse,
+  RenameDirectoryResponse,
 } from "./types/response";
 import type {
   QueryDirectoryAccountMovementsParams,
@@ -23,6 +24,7 @@ import type {
   ConfirmTransferParams,
   RequestTransferParams,
   SubmitDirectoryParams,
+  RenameDirectoryParams,
 } from "./types/request";
 
 // This service allows to configure a directory with credentials to allow
@@ -60,6 +62,42 @@ export const submitDirectory = api<SubmitDirectoryParams>(
   },
 );
 
+// Rename or remove name the session's user banking directory.
+export const renameDirectory = api<RenameDirectoryParams>(
+  {
+    expose: true,
+    method: "PATCH",
+    path: "/banking/directory/:id",
+    auth: true,
+  },
+  async (payload): Promise<RenameDirectoryResponse> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    const directoryId = payload.id;
+
+    const result = await bankingService.renameDirectory(
+      userId,
+      directoryId,
+      payload.name,
+    );
+
+    return {
+      directory: {
+        id: result.id,
+        name: result.name,
+        provider_name: result.providerName,
+        created_at: result.createdAt.toISOString(),
+        updated_at: result.updatedAt ? result.updatedAt.toISOString() : null,
+      },
+    };
+  },
+);
+
 // List of directories that the user have issued before.
 //
 // If a client wants to gather banking data then it should start with this endpoint
@@ -81,7 +119,7 @@ export const listDirectory = api(
     const { bankingService } = await applicationContext;
 
     const results = await bankingService.listDirectories(userId);
-
+    1;
     return {
       data: results.map((r) => ({
         id: r.id,

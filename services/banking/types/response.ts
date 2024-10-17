@@ -18,6 +18,10 @@ export interface SubmitDirectoryResponse {
   directory: ExportableDirectory;
 }
 
+export interface RenameDirectoryResponse {
+  directory: ExportableDirectory;
+}
+
 export interface ListDirectoriesResponse {
   data: ExportableDirectory[];
 }

@@ -10,6 +10,12 @@ export interface SubmitDirectoryParams {
   credentials: PrometeoCredentials;
 }
 
+export interface RenameDirectoryParams {
+  id: number;
+  // The new name that the directory will receive.
+  name: string | null;
+}
+
 export interface ListDirectoryAccountsParams {
   id: number;
 }
