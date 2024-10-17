@@ -13,8 +13,9 @@ import type {
   PreprocessTranferResponse,
   ConfirmTransferResponse,
   ListDirectoriesResponse,
-  SetupDirectoryResponse,
+  SubmitDirectoryResponse,
   ListCatalogResponse,
+  RenameDirectoryResponse,
 } from "./types/response";
 import type {
   QueryDirectoryAccountMovementsParams,
@@ -22,19 +23,20 @@ import type {
   ListDirectoryAccountsParams,
   ConfirmTransferParams,
   RequestTransferParams,
-  SetupDirectoryParams,
+  SubmitDirectoryParams,
+  RenameDirectoryParams,
 } from "./types/request";
 
 // This service allows to configure a directory with credentials to allow
 // Prometeo API to log-in to read and mutate the user's bank accounts.
-export const submitDirectory = api<SetupDirectoryParams>(
+export const submitDirectory = api<SubmitDirectoryParams>(
   {
     expose: true,
     method: "POST",
     path: "/banking/directory",
     auth: true,
   },
-  async (payload): Promise<SetupDirectoryResponse> => {
+  async (payload): Promise<SubmitDirectoryResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -46,7 +48,43 @@ export const submitDirectory = api<SetupDirectoryParams>(
 
     const { bankingService } = await applicationContext;
 
-    const result = await bankingService.setupDirectory(userId, payload);
+    const result = await bankingService.submitDirectory(userId, payload);
+
+    return {
+      directory: {
+        id: result.id,
+        name: result.name,
+        provider_name: result.providerName,
+        created_at: result.createdAt.toISOString(),
+        updated_at: result.updatedAt ? result.updatedAt.toISOString() : null,
+      },
+    };
+  },
+);
+
+// Rename or remove name the session's user banking directory.
+export const renameDirectory = api<RenameDirectoryParams>(
+  {
+    expose: true,
+    method: "PATCH",
+    path: "/banking/directory/:id",
+    auth: true,
+  },
+  async (payload): Promise<RenameDirectoryResponse> => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) {
+      throw ServiceError.userNotFound;
+    }
+
+    const { bankingService } = await applicationContext;
+
+    const directoryId = payload.id;
+
+    const result = await bankingService.renameDirectory(
+      userId,
+      directoryId,
+      payload.name,
+    );
 
     return {
       directory: {
@@ -81,7 +119,7 @@ export const listDirectory = api(
     const { bankingService } = await applicationContext;
 
     const results = await bankingService.listDirectories(userId);
-
+    1;
     return {
       data: results.map((r) => ({
         id: r.id,

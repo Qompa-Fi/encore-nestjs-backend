@@ -9,7 +9,7 @@ import Redis from "ioredis";
 import { validateSetupDirectoryInputs } from "./validators/request";
 import type { BankingDirectoryWithoutCredentials } from "./types/banking-directory";
 import type { PrometeoAPILoginParams } from "../prometeo/types/prometeo-api";
-import type { SetupDirectoryParams } from "./types/request";
+import type { SubmitDirectoryParams } from "./types/request";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
 import type {
   UserBankAccount,
@@ -82,16 +82,53 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async setupDirectory(
+  async renameDirectory(
     userId: number,
-    inputs: SetupDirectoryParams,
+    directoryId: number,
+    newName: string | null,
+  ): Promise<BankingDirectoryWithoutCredentials> {
+    if (newName) {
+      if (newName.length < 4) {
+        throw ServiceError.nameMustBeMoreThan4Chars;
+      }
+
+      if (newName.length > 90) {
+        throw ServiceError.nameMustBeLessEqThan90Chars;
+      }
+    }
+
+    return await this.bankingDirectory.update({
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        providerName: true,
+      },
+      where: {
+        userId,
+        id: directoryId,
+      },
+      data: {
+        name: newName,
+      },
+    });
+  }
+
+  async submitDirectory(
+    userId: number,
+    inputs: SubmitDirectoryParams,
   ): Promise<BankingDirectoryWithoutCredentials> {
     const providers = await this.getPrometeoProviders();
 
-    if (inputs.name && inputs.name.length > 90) {
-      throw APIError.invalidArgument(
-        "'name' must be less than 90 characters long",
-      );
+    if (inputs.name) {
+      if (inputs.name.length < 4) {
+        throw ServiceError.nameMustBeMoreThan4Chars;
+      }
+
+      if (inputs.name.length > 90) {
+        throw ServiceError.nameMustBeLessEqThan90Chars;
+      }
     }
 
     if (inputs.prometeo_provider === "test") {
