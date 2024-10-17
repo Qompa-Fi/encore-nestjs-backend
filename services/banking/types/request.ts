@@ -3,7 +3,7 @@ import type { Query } from "encore.dev/api";
 import type { PrometeoCredentials } from "./prometeo-credentials";
 import type { PreprocessTranferDto } from "../dtos/preprocess-transfer.dto";
 
-export interface SetupDirectoryParams {
+export interface SubmitDirectoryParams {
   // Optional. The name that the directory will have.
   name?: string;
   prometeo_provider: string;

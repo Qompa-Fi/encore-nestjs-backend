@@ -9,7 +9,7 @@ import Redis from "ioredis";
 import { validateSetupDirectoryInputs } from "./validators/request";
 import type { BankingDirectoryWithoutCredentials } from "./types/banking-directory";
 import type { PrometeoAPILoginParams } from "../prometeo/types/prometeo-api";
-import type { SetupDirectoryParams } from "./types/request";
+import type { SubmitDirectoryParams } from "./types/request";
 import type { PrometeoCredentials } from "./types/prometeo-credentials";
 import type {
   UserBankAccount,
@@ -82,9 +82,9 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async setupDirectory(
+  async submitDirectory(
     userId: number,
-    inputs: SetupDirectoryParams,
+    inputs: SubmitDirectoryParams,
   ): Promise<BankingDirectoryWithoutCredentials> {
     const providers = await this.getPrometeoProviders();
 

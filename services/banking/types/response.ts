@@ -14,7 +14,7 @@ interface ExportableDirectory {
   updated_at: string | null;
 }
 
-export interface SetupDirectoryResponse {
+export interface SubmitDirectoryResponse {
   directory: ExportableDirectory;
 }
 

@@ -13,7 +13,7 @@ import type {
   PreprocessTranferResponse,
   ConfirmTransferResponse,
   ListDirectoriesResponse,
-  SetupDirectoryResponse,
+  SubmitDirectoryResponse,
   ListCatalogResponse,
 } from "./types/response";
 import type {
@@ -22,19 +22,19 @@ import type {
   ListDirectoryAccountsParams,
   ConfirmTransferParams,
   RequestTransferParams,
-  SetupDirectoryParams,
+  SubmitDirectoryParams,
 } from "./types/request";
 
 // This service allows to configure a directory with credentials to allow
 // Prometeo API to log-in to read and mutate the user's bank accounts.
-export const submitDirectory = api<SetupDirectoryParams>(
+export const submitDirectory = api<SubmitDirectoryParams>(
   {
     expose: true,
     method: "POST",
     path: "/banking/directory",
     auth: true,
   },
-  async (payload): Promise<SetupDirectoryResponse> => {
+  async (payload): Promise<SubmitDirectoryResponse> => {
     const userId = mayGetInternalUserIdFromAuthData();
     if (!userId) {
       throw ServiceError.userNotFound;
@@ -46,7 +46,7 @@ export const submitDirectory = api<SetupDirectoryParams>(
 
     const { bankingService } = await applicationContext;
 
-    const result = await bankingService.setupDirectory(userId, payload);
+    const result = await bankingService.submitDirectory(userId, payload);
 
     return {
       directory: {
