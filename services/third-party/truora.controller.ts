@@ -36,7 +36,7 @@ export const newTruoraIdentityVerification = api(
     const { api_key } = await truoraService.createApiKey({
       key_type: "sdk",
       key_name: "qompa-flow",
-      country: "PE",
+      country: "ALL",
       grant: "digital-identity",
       flow_id: "IPFe2cb9113707a664e446fe3fb9e52b631",
       redirect_url: "https://qompa.io",
