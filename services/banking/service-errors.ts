@@ -14,4 +14,12 @@ export namespace ServiceError {
   export const directoryNotFound = APIError.notFound(
     "specified directory was not found",
   );
+
+  export const nameMustBeMoreThan4Chars = APIError.invalidArgument(
+    "name must be more than 4 characters long",
+  );
+
+  export const nameMustBeLessEqThan90Chars = APIError.invalidArgument(
+    "name must be less or equal than 90 characters long",
+  );
 }

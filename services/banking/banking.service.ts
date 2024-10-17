@@ -88,10 +88,14 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   ): Promise<BankingDirectoryWithoutCredentials> {
     const providers = await this.getPrometeoProviders();
 
-    if (inputs.name && inputs.name.length > 90) {
-      throw APIError.invalidArgument(
-        "'name' must be less than 90 characters long",
-      );
+    if (inputs.name) {
+      if (inputs.name.length < 4) {
+        throw ServiceError.nameMustBeMoreThan4Chars;
+      }
+
+      if (inputs.name.length > 90) {
+        throw ServiceError.nameMustBeLessEqThan90Chars;
+      }
     }
 
     if (inputs.prometeo_provider === "test") {
