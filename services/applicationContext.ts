@@ -2,8 +2,10 @@ import { NestFactory } from "@nestjs/core";
 
 import { OrganizationsService } from "./organizations/organizations.service";
 import { OrganizationsModule } from "./organizations/organizations.module";
+import { ThirdPartyModule } from "./third-party/third-part.module";
 import { SecurityService } from "./security/security.service";
 import { PrometeoService } from "./prometeo/prometeo.service";
+import { TruoraService } from "./third-party/truora.service";
 import { PrometeoModule } from "./prometeo/prometeo.module";
 import { SecurityModule } from "./security/security.module";
 import { BankingService } from "./banking/banking.service";
@@ -39,6 +41,9 @@ const applicationContext = NestFactory.createApplicationContext(AppModule).then(
         .select(UsersModule)
         .get(UsersService, { strict: true }),
       securityService: app.select(SecurityModule).get(SecurityService, {
+        strict: true,
+      }),
+      truoraService: app.select(ThirdPartyModule).get(TruoraService, {
         strict: true,
       }),
     };
