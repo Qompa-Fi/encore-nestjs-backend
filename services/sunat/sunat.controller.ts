@@ -13,6 +13,8 @@ import {
   checkSaveSunatProfileDto,
   type ISaveSunatProfileDto,
 } from "./dtos/save-sunat-profile.dto";
+import { organizations as organizationMicroservice } from "~encore/clients";
+import { ServiceError } from "./service-errors";
 
 export const searchByDNI = api(
   { expose: true, method: "GET", path: "/sunat/search-by-dni/:dni" },
@@ -114,7 +116,15 @@ export const getSunatProfile = api(
 
     const { sunatService } = await applicationContext;
 
-    const profile = await sunatService.getSunatProfile(userId);
+    const { organizations } = await organizationMicroservice.getOrganizations();
+    if (!organizations || organizations.length === 0) {
+      throw ServiceError.createOrganizationFirst;
+    }
+
+    // for now a single user can have only one organization
+    const organizationId = organizations[0].id;
+
+    const profile = await sunatService.getSunatProfile(userId, organizationId);
     if (!profile) {
       throw APIError.notFound("sunat profile not found");
     }
@@ -152,7 +162,19 @@ export const saveSunatProfile = api(
 
     const { sunatService } = await applicationContext;
 
-    const profile = await sunatService.saveSunatProfile(userId, payload);
+    const { organizations } = await organizationMicroservice.getOrganizations();
+    if (!organizations || organizations.length === 0) {
+      throw ServiceError.createOrganizationFirst;
+    }
+
+    // for now a single user can have only one organization
+    const organizationId = organizations[0].id;
+
+    const profile = await sunatService.saveSunatProfile(
+      userId,
+      organizationId,
+      payload,
+    );
 
     return {
       sunatProfile: toSerializableSunatProfile(profile),
