@@ -103,46 +103,54 @@ export class SunatService extends PrismaClient implements OnModuleInit {
   }
 
   async saveSunatProfile(
-    userOwnerId: number,
-    { solUsername, solKey }: ISaveSunatProfileDto,
+    userId: number,
+    organizationId: number,
+    payload: ISaveSunatProfileDto,
   ): Promise<SunatProfile> {
-    const apiError = checkSaveSunatProfileDto({
-      solUsername,
-      solKey,
-    });
+    const apiError = checkSaveSunatProfileDto(payload);
     if (apiError) throw apiError;
 
-    const { securityService } = await applicationContext;
-
-    const { userExists } = await users.existsById({
-      id: userOwnerId,
-    });
+    const { userExists } = await users.existsById({ id: userId });
     if (!userExists) {
       log.error(
-        `user with id '${userOwnerId}' not found but it tried to save its sunat profile`,
+        `user with id '${userId}' not found but it tried to save its sunat profile`,
       );
       throw APIError.notFound("user not found");
     }
 
-    const sunatProfileExists =
-      await this.sunatProfileExistsByUserId(userOwnerId);
-    if (sunatProfileExists) {
+    const alreadyExists = await this.sunatProfileExists(userId, organizationId);
+    if (alreadyExists) {
       log.warn(
-        `user with id '${userOwnerId}' already has a sunat profile but it tried to save its sunat profile`,
+        `user with id '${userId}' already has a sunat profile but it tried to save its sunat profile`,
       );
       throw APIError.alreadyExists("user already has a sunat profile");
     }
 
+    const { organization } = await organizations.getUserOrganization({
+      id: organizationId,
+    });
+
+    const { valid: validCredentials } = await this.loginWithCredentials({
+      ruc: organization.ruc,
+      username: payload.solUsername,
+      password: payload.solKey,
+    });
+    if (!validCredentials) {
+      throw ServiceError.invalidSolCredentials;
+    }
+
+    const { securityService } = await applicationContext;
+
     const encryptedSolKey = securityService.encryptAES256(
-      solKey,
+      payload.solKey,
       this.sunatEncryptionKey,
     );
 
     const profile = await this.sunatProfile.create({
       data: {
-        userId: userOwnerId,
-        solUsername,
         organizationId,
+        userId,
+        solUsername: payload.solUsername,
         encryptedSolKey,
       },
     });
@@ -260,5 +268,92 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     }
 
     return results;
+  }
+
+  async loginWithCredentials(credentials: {
+    ruc: string;
+    username: string;
+    password: string;
+  }): Promise<{
+    valid: boolean;
+  }> {
+    const oauth2Endpoint = await this.initOauth2Endpoint();
+    if (!oauth2Endpoint) return { valid: false };
+
+    const structuredOauth2Endpoint = new URL(oauth2Endpoint);
+
+    const state = structuredOauth2Endpoint.searchParams.get("state") ?? "";
+
+    structuredOauth2Endpoint.search = "";
+    const urlWithoutParams = structuredOauth2Endpoint.toString();
+    const trimmedEndpoint = urlWithoutParams.substring(
+      0,
+      urlWithoutParams.lastIndexOf("/"),
+    );
+
+    const response = await fetch(`${trimmedEndpoint}/j_security_check`, {
+      method: "POST",
+      headers: {
+        Accept: "text/html",
+        Origin: "https://api-seguridad.sunat.gob.pe",
+        Referer: "https://e-menu.sunat.gob.pe/",
+        DNT: "1",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        tipo: "2",
+        dni: "",
+        custom_ruc: credentials.ruc,
+        j_username: credentials.username,
+        j_password: credentials.password,
+        captcha: "",
+        state,
+        originalUrl: "",
+      }),
+      redirect: "follow",
+    });
+
+    const document = await response.text();
+
+    return {
+      valid: document.includes("Bienvenidos a SUNAT"),
+    };
+  }
+
+  private async initOauth2Endpoint(): Promise<string | null> {
+    const response = await fetch(
+      "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm",
+      {
+        credentials: "include",
+        headers: {
+          Accept: "text/html",
+          "Accept-Language": "en-US,en;q=0.5",
+          Origin: "https://api-seguridad.sunat.gob.pe",
+          Referer: "https://e-menu.sunat.gob.pe/",
+          "User-Agent":
+            "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0",
+          DNT: "1",
+        },
+      },
+    );
+
+    const body = await response.text();
+
+    // https://stackoverflow.com/a/6041965 :)
+    const rxUrlWithParams =
+      /(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])/;
+
+    const matches = body.match(rxUrlWithParams);
+    if (matches) {
+      for (const match of matches) {
+        if (
+          match.includes("https://api-seguridad.sunat.gob.pe/v1/clientessol")
+        ) {
+          return match;
+        }
+      }
+    }
+
+    return null;
   }
 }
