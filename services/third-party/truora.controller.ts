@@ -5,7 +5,10 @@ import type {
   GetTruoraProcessResultResponse,
   NewTruoraIdentityVerificationResponse,
 } from "./types/response";
-import type { GetTruoraProcessResultParams } from "./types/request";
+import type {
+  GetTruoraProcessResultParams,
+  NewTruoraIdentityVerificationParams,
+} from "./types/request";
 import {
   mayGetInternalUserIdFromAuthData,
   mustGetUserIdFromPublicMetadata,
@@ -48,43 +51,44 @@ export const getTruoraProcessResult = api<GetTruoraProcessResultParams>(
 
 // Every registered user must succeed the Truora's identity verification so ensure
 // to claim a key in this endpoint and use it in "https://identity.truora.com".
-export const newTruoraIdentityVerification = api(
-  {
-    expose: true,
-    method: "POST",
-    path: "/third-party/truora/new-identity-verification",
-    auth: true,
-  },
-  async (): Promise<NewTruoraIdentityVerificationResponse> => {
-    const user = getAuthData();
-    if (!user) throw ServiceError.somethingWentWrong;
+export const newTruoraIdentityVerification =
+  api<NewTruoraIdentityVerificationParams>(
+    {
+      expose: true,
+      method: "POST",
+      path: "/third-party/truora/new-identity-verification",
+      auth: true,
+    },
+    async ({ platform }): Promise<NewTruoraIdentityVerificationResponse> => {
+      const user = getAuthData();
+      if (!user) throw ServiceError.somethingWentWrong;
 
-    const userId = mustGetUserIdFromPublicMetadata(user);
+      const userId = mustGetUserIdFromPublicMetadata(user);
 
-    const { truoraService } = await applicationContext;
+      const { truoraService } = await applicationContext;
 
-    const emails =
-      user.metadata.emailAddresses.length > 0
-        ? user.metadata.emailAddresses.map((em) => em.emailAddress)
-        : undefined;
+      const emails =
+        user.metadata.emailAddresses.length > 0
+          ? user.metadata.emailAddresses.map((em) => em.emailAddress)
+          : undefined;
 
-    // const phones =
-    //   user.metadata.phoneNumbers.length > 0
-    //     ? user.metadata.phoneNumbers.map((ph) => ph.phoneNumber)
-    //     : undefined;
+      // const phones =
+      //   user.metadata.phoneNumbers.length > 0
+      //     ? user.metadata.phoneNumbers.map((ph) => ph.phoneNumber)
+      //     : undefined;
 
-    const { api_key } = await truoraService.createApiKey({
-      key_type: "sdk",
-      key_name: "qompa-flow",
-      country: "ALL",
-      grant: "digital-identity",
-      flow_id: "IPFe2cb9113707a664e446fe3fb9e52b631",
-      redirect_url: "https://qompa.io",
-      account_id: userId.toString(),
-      emails,
-      // phones,
-    });
+      const { api_key } = await truoraService.createApiKey({
+        key_type: platform === "mobile" ? "sdk" : "web",
+        key_name: "qompa-flow",
+        country: "ALL",
+        grant: "digital-identity",
+        flow_id: "IPFe2cb9113707a664e446fe3fb9e52b631",
+        redirect_url: "https://qompa.io",
+        account_id: userId.toString(),
+        emails,
+        // phones,
+      });
 
-    return { key: api_key };
-  },
-);
+      return { key: api_key };
+    },
+  );
