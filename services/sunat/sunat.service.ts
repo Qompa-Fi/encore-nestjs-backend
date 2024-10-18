@@ -1,9 +1,9 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import { parse as parseHtml } from "node-html-parser";
 import { PrismaClient, type SunatProfile } from "@prisma/client";
+import { parse as parseHtml } from "node-html-parser";
 import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
-import { users } from "~encore/clients";
+import { organizations, users } from "~encore/clients";
 import log from "encore.dev/log";
 import axios from "axios";
 
@@ -16,6 +16,7 @@ import applicationContext from "../applicationContext";
 import type { IRUC } from "./interfaces/ruc.interface";
 import type { IDNI } from "./interfaces/dni.interface";
 import type { IRubro } from "./interfaces/rubro.interface";
+import { ServiceError } from "./service-errors";
 
 interface EntitySearchParam {
   type: "RUC" | "DNI";
@@ -89,9 +90,15 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     ];
   }
 
-  async getSunatProfile(userId: number): Promise<SunatProfile | null> {
-    return this.sunatProfile.findUnique({
-      where: { userId },
+  async getSunatProfile(
+    userId: number,
+    organizationId: number,
+  ): Promise<SunatProfile | null> {
+    return this.sunatProfile.findFirst({
+      where: {
+        userId,
+        organizationId,
+      },
     });
   }
 
@@ -135,6 +142,7 @@ export class SunatService extends PrismaClient implements OnModuleInit {
       data: {
         userId: userOwnerId,
         solUsername,
+        organizationId,
         encryptedSolKey,
       },
     });
@@ -142,8 +150,13 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     return profile;
   }
 
-  async sunatProfileExistsByUserId(userId: number): Promise<boolean> {
-    return (await this.sunatProfile.count({ where: { userId } })) > 0;
+  async sunatProfileExists(
+    userId: number,
+    organizationId: number,
+  ): Promise<boolean> {
+    return (
+      (await this.sunatProfile.count({ where: { userId, organizationId } })) > 0
+    );
   }
 
   async searchByRUC(ruc: string): Promise<IRUC | null> {
