@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { APIError } from "encore.dev/api";
+import { sunat } from "~encore/clients";
 import log from "encore.dev/log";
 import {
   type Organization as OrganizationModel,
@@ -10,12 +11,27 @@ import {
 
 import type { IRubro } from "@/services/sunat/interfaces/rubro.interface";
 import { ServiceError } from "./service-errors";
-import { sunat } from "~encore/clients";
 
 @Injectable()
 export class OrganizationsService extends PrismaClient implements OnModuleInit {
   async onModuleInit() {
     await this.$connect();
+  }
+
+  async findUserOrganization(
+    userId: number,
+    organizationId: number,
+  ): Promise<OrganizationModel | null> {
+    return await this.organization.findUnique({
+      where: {
+        id: organizationId,
+        organizationMembers: {
+          every: {
+            userId,
+          },
+        },
+      },
+    });
   }
 
   async getAllForUser(userId: number): Promise<OrganizationModel[]> {

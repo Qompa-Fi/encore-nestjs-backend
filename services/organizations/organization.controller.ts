@@ -2,8 +2,14 @@ import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import type { SerializableOrganization } from "./interfaces/serializable-organization.interface";
-import { mustGetAuthData, mustGetUserIdFromPublicMetadata } from "@/lib/clerk";
+import {
+  mayGetInternalUserIdFromAuthData,
+  mustGetAuthData,
+  mustGetUserIdFromPublicMetadata,
+} from "@/lib/clerk";
 import { toSerializableOrganization } from "./helpers/serializable";
+import type { GetUserOrganizationResponse } from "./types/response";
+import type { GetUserOrganizationParams } from "./types/request";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
 import {
@@ -85,3 +91,31 @@ export const createOrganization = api(
     }
   },
 );
+
+export const getUserOrganization = api<
+  GetUserOrganizationParams,
+  GetUserOrganizationResponse
+>({ expose: false, auth: true }, async (payload) => {
+  const userId = mayGetInternalUserIdFromAuthData();
+  if (!userId) throw ServiceError.userNotFound;
+
+  const { organizationsService } = await applicationContext;
+
+  try {
+    const organization = await organizationsService.findUserOrganization(
+      userId,
+      payload.id,
+    );
+    if (!organization) throw ServiceError.organizationNotFound;
+
+    return {
+      organization: toSerializableOrganization(organization),
+    };
+  } catch (error) {
+    if (error instanceof APIError) throw error;
+
+    log.error(`unhandled error when trying to get user organization: ${error}`);
+
+    throw ServiceError.somethingWentWrong;
+  }
+});
