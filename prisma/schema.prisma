@@ -20,9 +20,10 @@ model User {
   onboardedAt                     DateTime?             @map("onboarded_at")
   acceptTermsAndPrivacyPolicy     Boolean               @map("accept_terms_and_privacy_policy")
   acknowledgesLegalRepresentation Boolean               @map("acknowledges_legal_representation")
-  sunatProfile                    SunatProfile?
+  sunatProfile                    SunatProfile?         @relation(fields: [sunatProfileId], references: [id])
   organizationMembers             OrganizationMembers[]
   bankingDirectories              BankingDirectory[]
+  sunatProfileId                  Int?
 
   @@map("users")
 }
@@ -35,6 +36,8 @@ model Organization {
   ruc                 String                @unique
   size                String                @db.VarChar(10)
   organizationMembers OrganizationMembers[]
+  SunatProfile        SunatProfile?         @relation(fields: [sunatProfileId], references: [id])
+  sunatProfileId      Int?
 
   @@map("organizations")
 }
@@ -51,11 +54,13 @@ model OrganizationMembers {
 }
 
 model SunatProfile {
-  id              Int    @id @default(autoincrement())
-  userId          Int    @unique @map("user_id")
-  solUsername     String @unique @map("sol_username")
-  encryptedSolKey String @map("encrypted_sol_key")
-  user            User   @relation(fields: [userId], references: [id])
+  id              Int            @id @default(autoincrement())
+  userId          Int            @map("user_id")
+  organizationId  Int            @map("organization_id")
+  solUsername     String         @unique @map("sol_username")
+  encryptedSolKey String         @map("encrypted_sol_key")
+  User            User[]
+  Organization    Organization[]
 
   @@map("sunat_profiles")
 }
