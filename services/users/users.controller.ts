@@ -1,5 +1,4 @@
 import { api, APIError } from "encore.dev/api";
-import { auth } from "~encore/clients";
 import log from "encore.dev/log";
 
 import applicationContext from "@/services/applicationContext";
@@ -28,12 +27,8 @@ export const getUser = api(
 
 export const createUser = api(
   { expose: true, method: "POST", path: "/user", auth: true },
-  async ({
-    acceptTermsAndPrivacyPolicy,
-    acknowledgesLegalRepresentation,
-  }: {
+  async (payload: {
     acceptTermsAndPrivacyPolicy: boolean;
-    acknowledgesLegalRepresentation: boolean;
   }): Promise<Response> => {
     const { usersService } = await applicationContext;
     const authenticatedUser = mustGetAuthData();
@@ -43,12 +38,6 @@ export const createUser = api(
     log.debug(
       `someone identified with clerk id '${clerkId}' wants to create its own user...`,
     );
-
-    if (!acceptTermsAndPrivacyPolicy || !acknowledgesLegalRepresentation) {
-      throw APIError.invalidArgument(
-        "You must acknowledge the legal representation and accept the Terms of Service and Privacy Policy.",
-      );
-    }
 
     const alreadyExists = await usersService.existsByClerkId(
       authenticatedUser.userID,
@@ -61,13 +50,10 @@ export const createUser = api(
       `user identified with clerk id '${clerkId}' does not exist, creating...`,
     );
 
-    const user = await usersService.create({
+    const user = await usersService.create(clerkId, {
       clerkId,
-      acknowledgesLegalRepresentation,
-      acceptTermsAndPrivacyPolicy,
+      acceptTermsAndPrivacyPolicy: payload.acceptTermsAndPrivacyPolicy,
     });
-
-    await auth.saveInternalUserIdInPublicMetadata({ clerkId, userId: user.id });
 
     return { user: toSerializableUser(user) };
   },

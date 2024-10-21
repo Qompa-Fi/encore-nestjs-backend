@@ -11,8 +11,6 @@ import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import { QOMPA_INTERNAL_USER_ID_KEY } from "./auth";
-
 const clerkPublishableKey = secret("ClerkPublishableKey");
 const clerkSecretKey = secret("ClerkSecretKey");
 const clerkJwtKey = secret("ClerkJwtKey");
@@ -61,15 +59,6 @@ export class AuthService extends PrismaClient implements OnModuleInit {
 
   async getUser(userId: string): Promise<User> {
     return await this.clerkClient.users.getUser(userId);
-  }
-
-  async saveInternalUserIdInPublicMetadata(
-    userId: string,
-    qompaInternalUserId: number,
-  ): Promise<void> {
-    await this.savePublicMetadata(userId, {
-      [QOMPA_INTERNAL_USER_ID_KEY]: qompaInternalUserId,
-    });
   }
 
   /*
