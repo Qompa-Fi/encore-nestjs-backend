@@ -6,6 +6,7 @@ import {
   type Prisma,
   PrismaClient,
 } from "@prisma/client";
+import type { DocumentType } from "./types/user";
 import { ServiceError } from "./service-errors";
 
 const clerkPublishableKey = secret("ClerkPublishableKey");
@@ -32,6 +33,10 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     clerkUserId: string,
     inputs: Prisma.UserCreateInput & {
       acceptTermsAndPrivacyPolicy: boolean;
+      document?: {
+        type: DocumentType;
+        number: string;
+      };
     },
   ): Promise<UserModel> {
     // TODO: refactor in auth microservice
@@ -40,10 +45,14 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       throw ServiceError.somethingWentWrong;
     }
 
-    const { acceptTermsAndPrivacyPolicy: _, ...userData } = inputs;
+    const { acceptTermsAndPrivacyPolicy: _0, document, ...userData } = inputs;
 
     const internalUser = await this.user.create({
-      data: userData,
+      data: {
+        documentType: document?.type,
+        documentNumber: document?.number,
+        ...userData,
+      },
     });
 
     await this.clerkClient.users.updateUserMetadata(clerkUser.id, {
