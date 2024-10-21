@@ -17,7 +17,7 @@ enum OrganizationRole {
 enum DocumentType {
   dni
   passport
-  immigration
+  immigration_card
 }
 
 model User {
