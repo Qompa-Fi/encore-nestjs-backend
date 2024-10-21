@@ -1,22 +1,60 @@
+import { type ClerkClient, createClerkClient } from "@clerk/backend";
 import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { secret } from "encore.dev/config";
 import {
   type User as UserModel,
   type Prisma,
   PrismaClient,
 } from "@prisma/client";
+import { ServiceError } from "./service-errors";
 
-import { APIError } from "encore.dev/api";
+const clerkPublishableKey = secret("ClerkPublishableKey");
+const clerkSecretKey = secret("ClerkSecretKey");
 
 @Injectable()
 export class UsersService extends PrismaClient implements OnModuleInit {
+  clerkClient: ClerkClient;
+
+  constructor() {
+    super();
+
+    this.clerkClient = createClerkClient({
+      publishableKey: clerkPublishableKey(),
+      secretKey: clerkSecretKey(),
+    });
+  }
+
   async onModuleInit() {
     await this.$connect();
   }
 
-  async create(createUserDto: Prisma.UserCreateInput): Promise<UserModel> {
-    return await this.user.create({
-      data: createUserDto,
+  async create(
+    clerkUserId: string,
+    inputs: Prisma.UserCreateInput & {
+      acceptTermsAndPrivacyPolicy: boolean;
+    },
+  ): Promise<UserModel> {
+    // TODO: refactor in auth microservice
+    const clerkUser = await this.clerkClient.users.getUser(clerkUserId);
+    if (!clerkUser) {
+      throw ServiceError.somethingWentWrong;
+    }
+
+    const { acceptTermsAndPrivacyPolicy: _, ...userData } = inputs;
+
+    const internalUser = await this.user.create({
+      data: userData,
     });
+
+    await this.clerkClient.users.updateUserMetadata(clerkUser.id, {
+      publicMetadata: {
+        ...clerkUser.publicMetadata,
+        acceptTermsAndPrivacyPolicy: inputs.acceptTermsAndPrivacyPolicy,
+        internalUserId: internalUser.id,
+      },
+    });
+
+    return internalUser;
   }
 
   async findByClerkId(clerkId: string): Promise<UserModel | null> {
@@ -29,18 +67,6 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     userId: number,
     input: Prisma.UserUpdateInput,
   ): Promise<UserModel> {
-    if (input.acceptTermsAndPrivacyPolicy !== undefined) {
-      throw APIError.invalidArgument(
-        "You cannot modify the agreed terms or the privacy policy.",
-      );
-    }
-
-    if (input.acknowledgesLegalRepresentation !== undefined) {
-      throw APIError.invalidArgument(
-        "You cannot modify an acknowledged legal representation.",
-      );
-    }
-
     const data: Prisma.UserUpdateInput = {};
 
     if (input.onboardedAt !== undefined && input.onboardedAt !== null) {

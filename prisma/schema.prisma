@@ -15,15 +15,13 @@ enum OrganizationRole {
 }
 
 model User {
-  id                              Int                   @id @default(autoincrement())
-  clerkId                         String                @unique @map("clerk_id")
-  onboardedAt                     DateTime?             @map("onboarded_at")
-  acceptTermsAndPrivacyPolicy     Boolean               @map("accept_terms_and_privacy_policy")
-  acknowledgesLegalRepresentation Boolean               @map("acknowledges_legal_representation")
-  sunatProfile                    SunatProfile?         @relation(fields: [sunatProfileId], references: [id])
-  organizationMembers             OrganizationMembers[]
-  bankingDirectories              BankingDirectory[]
-  sunatProfileId                  Int?
+  id                  Int                   @id @default(autoincrement())
+  clerkId             String                @unique @map("clerk_id")
+  onboardedAt         DateTime?             @map("onboarded_at")
+  sunatProfile        SunatProfile?         @relation(fields: [sunatProfileId], references: [id])
+  organizationMembers OrganizationMembers[]
+  bankingDirectories  BankingDirectory[]
+  sunatProfileId      Int?
 
   @@map("users")
 }

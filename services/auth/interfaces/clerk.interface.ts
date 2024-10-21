@@ -81,7 +81,10 @@ interface IUser {
   readonly username: string | null;
   readonly firstName: string | null;
   readonly lastName: string | null;
-  readonly publicMetadata: { [k: string]: unknown };
+  readonly publicMetadata: {
+    acceptTermsAndPrivacyPolicy: boolean | undefined;
+    internalUserId: number | undefined;
+  };
   readonly privateMetadata: { [k: string]: unknown };
   readonly unsafeMetadata: { [k: string]: unknown };
   readonly emailAddresses: IEmailAddress[];
