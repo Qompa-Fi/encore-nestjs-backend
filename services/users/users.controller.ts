@@ -50,7 +50,6 @@ export const createUser = api<CreateUserParams, CreateUserResponse>(
     );
 
     const user = await usersService.create(clerkId, {
-      clerkId,
       acceptTermsAndPrivacyPolicy: payload.acceptTermsAndPrivacyPolicy,
     });
 

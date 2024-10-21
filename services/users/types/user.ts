@@ -1,1 +1,1 @@
-export type DocumentType = "dni" | "passport" | "immigration";
+export type DocumentType = "dni" | "passport" | "immigration_card";

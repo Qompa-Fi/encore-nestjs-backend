@@ -6,8 +6,10 @@ import {
   type Prisma,
   PrismaClient,
 } from "@prisma/client";
-import type { DocumentType } from "./types/user";
+import type { CreateUserInputs } from "./types/inputs";
 import { ServiceError } from "./service-errors";
+import { validateCreateUserInputs } from "./validators/request";
+import log from "encore.dev/log";
 
 const clerkPublishableKey = secret("ClerkPublishableKey");
 const clerkSecretKey = secret("ClerkSecretKey");
@@ -31,14 +33,14 @@ export class UsersService extends PrismaClient implements OnModuleInit {
 
   async create(
     clerkUserId: string,
-    inputs: Prisma.UserCreateInput & {
-      acceptTermsAndPrivacyPolicy: boolean;
-      document?: {
-        type: DocumentType;
-        number: string;
-      };
-    },
+    inputs: CreateUserInputs,
   ): Promise<UserModel> {
+    const apiError = validateCreateUserInputs(inputs);
+    if (apiError) {
+      log.debug("request payload was invalid");
+      throw apiError;
+    }
+
     // TODO: refactor in auth microservice
     const clerkUser = await this.clerkClient.users.getUser(clerkUserId);
     if (!clerkUser) {
@@ -49,6 +51,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
 
     const internalUser = await this.user.create({
       data: {
+        clerkId: clerkUser.id,
         documentType: document?.type,
         documentNumber: document?.number,
         ...userData,
