@@ -1,24 +1,29 @@
+import { organizations as organizationMicroservice } from "~encore/clients";
 import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import type { ISunatProfileResponse } from "./dtos/sunat-profile-response.dto";
 import { mustGetAuthData, mustGetUserIdFromPublicMetadata } from "@/lib/clerk";
-import type { SearchDNIResponseDto } from "./dtos/search-by-dni.dto";
-import type { SearchRUCResponseDto } from "./dtos/search-by-ruc.dto";
 import { toSerializableSunatProfile } from "./helpers/serializable";
-import type { GetRubrosDto } from "./dtos/get-rubros.dto";
+import { checkSaveSunatProfileDto } from "./validators/request";
 import applicationContext from "../applicationContext";
-import { checkRuc } from "@/lib/sunat";
-import {
-  checkSaveSunatProfileDto,
-  type ISaveSunatProfileDto,
-} from "./dtos/save-sunat-profile.dto";
-import { organizations as organizationMicroservice } from "~encore/clients";
 import { ServiceError } from "./service-errors";
+import { checkRuc } from "@/lib/sunat";
+import type {
+  SaveSunatProfileResponse,
+  GetSunatProfileResponse,
+  SearchByDNIResponse,
+  SearchByRUCResponse,
+  GetRubrosResponse,
+} from "./types/response";
+import type {
+  SaveSunatProfileParams,
+  SearchByDNIParams,
+  SearchByRUCParams,
+} from "./types/request";
 
-export const searchByDNI = api(
+export const searchByDNI = api<SearchByDNIParams, SearchByDNIResponse>(
   { expose: true, method: "GET", path: "/sunat/search-by-dni/:dni" },
-  async ({ dni }: { dni: string }): Promise<SearchDNIResponseDto> => {
+  async ({ dni }) => {
     if (!dni) throw APIError.invalidArgument("dni is required");
 
     if (dni.length !== 8)
@@ -39,9 +44,9 @@ export const searchByDNI = api(
   },
 );
 
-export const searchByRUC = api(
+export const searchByRUC = api<SearchByRUCParams, SearchByRUCResponse>(
   { expose: true, method: "GET", path: "/sunat/search-by-ruc/:ruc" },
-  async ({ ruc }: { ruc: string }): Promise<SearchRUCResponseDto> => {
+  async ({ ruc }) => {
     const errorMessage = checkRuc(ruc);
     if (errorMessage) throw APIError.invalidArgument(errorMessage);
 
@@ -70,14 +75,14 @@ export const searchByRUC = api(
   },
 );
 
-export const getRubros = api(
+export const getRubros = api<void, GetRubrosResponse>(
   {
     expose: true,
     auth: false,
     method: "GET",
     path: "/sunat/rubros",
   },
-  async (): Promise<GetRubrosDto> => {
+  async () => {
     const { sunatService } = await applicationContext;
 
     log.debug("retrieving rubros...");
@@ -92,14 +97,14 @@ export const getRubros = api(
   },
 );
 
-export const getSunatProfile = api(
+export const getSunatProfile = api<void, GetSunatProfileResponse>(
   {
     expose: true,
     auth: true,
     method: "GET",
     path: "/sunat/profile",
   },
-  async (): Promise<ISunatProfileResponse> => {
+  async () => {
     const authenticatedUser = mustGetAuthData();
     const clerkId = authenticatedUser.userID;
 
@@ -135,14 +140,17 @@ export const getSunatProfile = api(
   },
 );
 
-export const saveSunatProfile = api(
+export const saveSunatProfile = api<
+  SaveSunatProfileParams,
+  SaveSunatProfileResponse
+>(
   {
     expose: true,
     auth: true,
     method: "POST",
     path: "/sunat/profile",
   },
-  async (payload: ISaveSunatProfileDto): Promise<ISunatProfileResponse> => {
+  async (payload) => {
     const apiError = checkSaveSunatProfileDto(payload);
     if (apiError) throw apiError;
 

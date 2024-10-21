@@ -1,27 +1,28 @@
 import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import type { SerializableOrganization } from "./interfaces/serializable-organization.interface";
 import {
   mayGetInternalUserIdFromAuthData,
   mustGetAuthData,
   mustGetUserIdFromPublicMetadata,
 } from "@/lib/clerk";
 import { toSerializableOrganization } from "./helpers/serializable";
-import type { GetUserOrganizationResponse } from "./types/response";
-import type { GetUserOrganizationParams } from "./types/request";
+import type {
+  GetUserOrganizationResponse,
+  CreateOrganizationResponse,
+  GetOrganizationsResponse,
+} from "./types/response";
+import type {
+  GetUserOrganizationParams,
+  CreateOrganizationParams,
+} from "./types/request";
+import { checkCreateOrganizationParams } from "./validators/request";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
-import {
-  checkCreateOrganizationDto,
-  type ICreateOrganizationDto,
-} from "./dtos/create-organization.dto";
 
-export const getOrganizations = api(
+export const getOrganizations = api<void, GetOrganizationsResponse>(
   { expose: true, method: "GET", path: "/organizations", auth: true },
-  async (): Promise<{
-    organizations: SerializableOrganization[];
-  }> => {
+  async () => {
     const authenticatedUser = mustGetAuthData();
 
     log.debug("retrieving all user organizations...");
@@ -52,11 +53,12 @@ export const getOrganizations = api(
   },
 );
 
-export const createOrganization = api(
+export const createOrganization = api<
+  CreateOrganizationParams,
+  CreateOrganizationResponse
+>(
   { expose: true, method: "POST", path: "/organizations", auth: true },
-  async (
-    payload: ICreateOrganizationDto,
-  ): Promise<{ organization: SerializableOrganization }> => {
+  async (payload) => {
     const authenticatedUser = mustGetAuthData();
 
     log.debug(
@@ -67,7 +69,7 @@ export const createOrganization = api(
 
     const rubroIds = await organizationsService.getAvailableRubroIds();
 
-    const errorMessage = checkCreateOrganizationDto(payload, rubroIds);
+    const errorMessage = checkCreateOrganizationParams(payload, rubroIds);
     if (errorMessage) throw APIError.invalidArgument(errorMessage);
 
     const userId = mustGetUserIdFromPublicMetadata(authenticatedUser);

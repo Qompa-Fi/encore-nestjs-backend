@@ -1,18 +1,19 @@
 import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
+import type { CreateUserParams, ExistsByIDParams } from "./types/request";
+import type {
+  CreateUserResponse,
+  ExistsByIDResponse,
+  GetUserResponse,
+} from "./types/response";
 import applicationContext from "@/services/applicationContext";
-import type { SerializableUser } from "./interfaces/serializable-user.interface";
 import { toSerializableUser } from "./helpers/serializable";
 import { mustGetAuthData } from "@/lib/clerk";
 
-interface Response {
-  user: SerializableUser;
-}
-
-export const getUser = api(
+export const getUser = api<void, GetUserResponse>(
   { expose: true, method: "GET", path: "/user", auth: true },
-  async (): Promise<Response> => {
+  async () => {
     const { usersService } = await applicationContext;
     const authenticatedUser = mustGetAuthData();
 
@@ -25,11 +26,9 @@ export const getUser = api(
   },
 );
 
-export const createUser = api(
+export const createUser = api<CreateUserParams, CreateUserResponse>(
   { expose: true, method: "POST", path: "/user", auth: true },
-  async (payload: {
-    acceptTermsAndPrivacyPolicy: boolean;
-  }): Promise<Response> => {
+  async (payload) => {
     const { usersService } = await applicationContext;
     const authenticatedUser = mustGetAuthData();
 
@@ -59,16 +58,12 @@ export const createUser = api(
   },
 );
 
-export const existsById = api(
+export const existsById = api<ExistsByIDParams, ExistsByIDResponse>(
   { expose: false },
-  async ({
-    id,
-  }: { id: number }): Promise<{
-    userExists: boolean;
-  }> => {
+  async (payload) => {
     const { usersService } = await applicationContext;
 
-    const userExists = await usersService.existsById(id);
+    const userExists = await usersService.existsById(payload.id);
 
     return {
       userExists,

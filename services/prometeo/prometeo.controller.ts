@@ -24,8 +24,8 @@ import type {
   LoginResponse,
 } from "./types/response";
 import type {
-  QueryBankAccountMovementsParams,
   ListInstitutionsForTransfersParams,
+  QueryBankAccountMovementsParams,
   PreprocessTransferParams,
   ListBankAccountsParams,
   SelectClientParams,
@@ -36,9 +36,9 @@ import type {
 import { ServiceError } from "./service-errors";
 
 // Login to the specified provider using the Prometeo API.
-export const login = api<LoginParams>(
+export const login = api<LoginParams, LoginResponse>(
   { expose: false },
-  async (payload): Promise<LoginResponse> => {
+  async (payload) => {
     log.debug(
       `'${payload.username}' is logging in to Prometeo API using provider '${payload.provider}'...`,
     );
@@ -70,9 +70,9 @@ export const login = api<LoginParams>(
 );
 
 // Exits the session specified in the headers.
-export const logout = api<LogoutParams>(
+export const logout = api<LogoutParams, LogoutResponse>(
   { expose: false },
-  async (payload): Promise<LogoutResponse> => {
+  async (payload) => {
     const apiError = validateLogoutPayload(payload);
     if (apiError) throw apiError;
 
@@ -85,11 +85,14 @@ export const logout = api<LogoutParams>(
 );
 
 // Endpoint to query movements of a user account in a given currency and date range.
-export const queryBankAccountMovements = api<QueryBankAccountMovementsParams>(
+export const queryBankAccountMovements = api<
+  QueryBankAccountMovementsParams,
+  QueryBankAccountMovementsResponse
+>(
   {
     expose: false,
   },
-  async (payload): Promise<QueryBankAccountMovementsResponse> => {
+  async (payload) => {
     log.debug(
       `retrieving movements from bank account ${payload.account_number}(${payload.currency}) from ${payload.start_date} to ${payload.end_date}...`,
     );
@@ -108,9 +111,9 @@ export const queryBankAccountMovements = api<QueryBankAccountMovementsParams>(
 );
 
 // List all the providers that the Prometeo API supports.
-export const listProviders = api(
+export const listProviders = api<void, ListProvidersResponse>(
   { expose: false },
-  async (): Promise<ListProvidersResponse> => {
+  async () => {
     const { prometeoService } = await applicationContext;
 
     log.debug("retrieving providers...");
@@ -125,9 +128,9 @@ export const listProviders = api(
 
 // List all the clients that the current user has access to. Those clients changes
 // depending on the previously specified provider at endpoint to login.
-export const listClients = api<ListClientsParams>(
+export const listClients = api<ListClientsParams, ListClientsResponse>(
   { expose: false },
-  async (payload): Promise<ListClientsResponse> => {
+  async (payload) => {
     const { prometeoService } = await applicationContext;
 
     const apiError = validateGetClientsPayload(payload);
@@ -141,30 +144,30 @@ export const listClients = api<ListClientsParams>(
 
 // List all the accounts that the specified session key has access to.
 // Those accounts will vary depending on the specified provider and/or client.
-export const listBankAccounts = api<ListBankAccountsParams>(
-  { expose: false },
-  async (payload): Promise<ListBankAccountsResponse> => {
-    const apiError = validateListBankAccountsPayload(payload);
-    if (apiError) throw apiError;
+export const listBankAccounts = api<
+  ListBankAccountsParams,
+  ListBankAccountsResponse
+>({ expose: false }, async (payload) => {
+  const apiError = validateListBankAccountsPayload(payload);
+  if (apiError) throw apiError;
 
-    const { prometeoService } = await applicationContext;
+  const { prometeoService } = await applicationContext;
 
-    const data = await prometeoService.listBankAccounts(payload.key);
+  const data = await prometeoService.listBankAccounts(payload.key);
 
-    return { data };
-  },
-);
+  return { data };
+});
 
 // Endpoint to specify the client to use for the current session if the
 // provider requires it after login.
 //
 // If the key requires to specify a client, it will keep in standby for
 // some minutes until the client is selected.
-export const selectClient = api<SelectClientParams>(
+export const selectClient = api<SelectClientParams, SelectClientResponse>(
   {
     expose: false,
   },
-  async (payload): Promise<SelectClientResponse> => {
+  async (payload) => {
     const { prometeoService } = await applicationContext;
 
     const clients = await prometeoService.getClients({ key: payload.key });
@@ -197,37 +200,37 @@ export const selectClient = api<SelectClientParams>(
 //
 // This Prometeo API endpoint is implemented based on their API reference:
 // https://docs.prometeoapi.com/reference/gettransferdestinations
-export const listInstitutionsForTransfers =
-  api<ListInstitutionsForTransfersParams>(
-    { expose: false },
-    async (payload): Promise<ListInstitutionsForTransfersResponse> => {
-      const { prometeoService } = await applicationContext;
+export const listInstitutionsForTransfers = api<
+  ListInstitutionsForTransfersParams,
+  ListInstitutionsForTransfersResponse
+>({ expose: false }, async (payload) => {
+  const { prometeoService } = await applicationContext;
 
-      try {
-        const institutions = await prometeoService.listInstitutionsForTransfers(
-          {
-            key: payload.key,
-          },
-        );
+  try {
+    const institutions = await prometeoService.listInstitutionsForTransfers({
+      key: payload.key,
+    });
 
-        return {
-          data: institutions,
-        };
-      } catch (error) {
-        if (error instanceof APIError) throw error;
+    return {
+      data: institutions,
+    };
+  } catch (error) {
+    if (error instanceof APIError) throw error;
 
-        log.error(error, "unhandled error listing institutions for transfers");
+    log.error(error, "unhandled error listing institutions for transfers");
 
-        throw ServiceError.somethingWentWrong;
-      }
-    },
-  );
+    throw ServiceError.somethingWentWrong;
+  }
+});
 
-export const preprocessTransfer = api<PreprocessTransferParams>(
+export const preprocessTransfer = api<
+  PreprocessTransferParams,
+  PreprocessTransferResponse
+>(
   {
     expose: false,
   },
-  async (payload): Promise<PreprocessTransferResponse> => {
+  async (payload) => {
     try {
       const { prometeoService } = await applicationContext;
 
@@ -245,22 +248,22 @@ export const preprocessTransfer = api<PreprocessTransferParams>(
   },
 );
 
-export const confirmTransfer = api<ConfirmTransferParams>(
-  { expose: false },
-  async (payload): Promise<ConfirmTransferResponse> => {
-    try {
-      const { prometeoService } = await applicationContext;
+export const confirmTransfer = api<
+  ConfirmTransferParams,
+  ConfirmTransferResponse
+>({ expose: false }, async (payload) => {
+  try {
+    const { prometeoService } = await applicationContext;
 
-      const result = await prometeoService.confirmTransfer(payload);
+    const result = await prometeoService.confirmTransfer(payload);
 
-      return {
-        result,
-      };
-    } catch (error) {
-      if (error instanceof APIError) throw error;
+    return {
+      result,
+    };
+  } catch (error) {
+    if (error instanceof APIError) throw error;
 
-      log.error(error, "unhandled error confirming transfer");
-      throw ServiceError.somethingWentWrong;
-    }
-  },
-);
+    log.error(error, "unhandled error confirming transfer");
+    throw ServiceError.somethingWentWrong;
+  }
+});

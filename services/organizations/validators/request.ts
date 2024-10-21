@@ -1,15 +1,9 @@
+import type { CreateOrganizationParams } from "../types/request";
+import { TEAM_SIZES } from "../types/team-size";
 import { checkRuc } from "@/lib/sunat";
-import { TEAM_SIZES, type TeamSize } from "../types/team-size";
 
-export interface ICreateOrganizationDto {
-  name: string;
-  category: string;
-  ruc: string;
-  size: TeamSize;
-}
-
-export const checkCreateOrganizationDto = (
-  dto: ICreateOrganizationDto,
+export const checkCreateOrganizationParams = (
+  dto: CreateOrganizationParams,
   validRubroIds: string[],
 ): string | null => {
   const errorMessage = checkRuc(dto.ruc);

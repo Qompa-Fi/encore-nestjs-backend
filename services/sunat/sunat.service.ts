@@ -1,21 +1,19 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { PrismaClient, type SunatProfile } from "@prisma/client";
+import { organizations, users } from "~encore/clients";
 import { parse as parseHtml } from "node-html-parser";
 import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
-import { organizations, users } from "~encore/clients";
 import log from "encore.dev/log";
 import axios from "axios";
 
 import type { LegalRepresentativeDto } from "./interfaces/legal-representative.interface";
-import {
-  type ISaveSunatProfileDto,
-  checkSaveSunatProfileDto,
-} from "./dtos/save-sunat-profile.dto";
+import { checkSaveSunatProfileDto } from "./validators/request";
+import type { SaveSunatProfileParams } from "./types/request";
+import type { IRubro } from "./interfaces/rubro.interface";
 import applicationContext from "../applicationContext";
 import type { IRUC } from "./interfaces/ruc.interface";
 import type { IDNI } from "./interfaces/dni.interface";
-import type { IRubro } from "./interfaces/rubro.interface";
 import { ServiceError } from "./service-errors";
 
 interface EntitySearchParam {
@@ -105,7 +103,7 @@ export class SunatService extends PrismaClient implements OnModuleInit {
   async saveSunatProfile(
     userId: number,
     organizationId: number,
-    payload: ISaveSunatProfileDto,
+    payload: SaveSunatProfileParams,
   ): Promise<SunatProfile> {
     const apiError = checkSaveSunatProfileDto(payload);
     if (apiError) throw apiError;

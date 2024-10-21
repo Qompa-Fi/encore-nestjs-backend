@@ -1,12 +1,9 @@
 import { APIError } from "encore.dev/api";
 
-export interface ISaveSunatProfileDto {
-  solUsername: string;
-  solKey: string;
-}
+import type { SaveSunatProfileParams } from "../types/request";
 
 export const checkSaveSunatProfileDto = (
-  dto: ISaveSunatProfileDto,
+  dto: SaveSunatProfileParams,
 ): APIError | null => {
   if (!dto.solUsername) {
     return APIError.invalidArgument("solUsername is required");
