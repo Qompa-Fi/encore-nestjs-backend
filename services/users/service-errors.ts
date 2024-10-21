@@ -6,4 +6,14 @@ export namespace ServiceError {
   export const invalidDocument = APIError.invalidArgument(
     "invalid document",
   ).withDetails({ "x-error": "invalid_document" });
+
+  export const internalUserNotFound = APIError.notFound(
+    "internal user not found",
+  ).withDetails({ "x-error": "iuser_not_found" });
+
+  export const userAlreadyExists = APIError.alreadyExists(
+    "user already exists",
+  ).withDetails({
+    "x-error": "user_already_exists",
+  });
 }
