@@ -1,5 +1,5 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import { prometeo, users } from "~encore/clients";
+import { prometeo as prometeoMic, users as usersMic } from "~encore/clients";
 import { PrismaClient } from "@prisma/client";
 import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
@@ -52,8 +52,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   }
 
   private async getPrometeoProviders(): Promise<Provider[]> {
-    const providersResponse: { data: Provider[] } =
-      await prometeo.listProviders();
+    const providersResponse = await prometeoMic.listProviders();
     const providers = providersResponse.data;
 
     if (providers.length === 0) {
@@ -69,7 +68,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   private async userExistsById(userId: number): Promise<boolean> {
     try {
       const userExistsResponse: { userExists: boolean } =
-        await users.existsById({ id: userId });
+        await usersMic.existsById({ id: userId });
 
       return userExistsResponse.userExists;
     } catch (error) {
@@ -395,7 +394,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       loginPayload.document_number = credentials.document_number;
     }
 
-    const { session }: LoginResponse = await prometeo.login(loginPayload);
+    const { session }: LoginResponse = await prometeoMic.login(loginPayload);
 
     if (session.requires !== "nothing") {
       return ""; // unreachable for now
@@ -413,14 +412,13 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   ): Promise<UserBankAccount[]> {
     let sessionKey = prometeoSessionKey;
 
-    if (!prometeoSessionKey) {
+    if (!sessionKey) {
       sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
     }
 
-    const response: { data: UserBankAccount[] } =
-      await prometeo.listBankAccounts({
-        key: sessionKey,
-      });
+    const response = await prometeoMic.listBankAccounts({
+      key: sessionKey,
+    });
 
     return response.data;
   }
@@ -438,7 +436,7 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   ): Promise<UserBankAccountMovement[]> {
     let sessionKey = prometeoSessionKey;
 
-    if (!prometeoSessionKey) {
+    if (!sessionKey) {
       log.trace(
         "login in to Prometeo API since no session key was specified...",
       );
@@ -448,12 +446,11 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       log.trace(`Prometeo API's session key is truthy? ${!!sessionKey}`);
     }
 
-    const response: { data: UserBankAccountMovement[] } =
-      await prometeo.queryBankAccountMovements({
-        key: sessionKey,
-        account_number: accountNumber,
-        ...filters,
-      });
+    const response = await prometeoMic.queryBankAccountMovements({
+      key: sessionKey,
+      account_number: accountNumber,
+      ...filters,
+    });
 
     return response.data;
   }
@@ -465,12 +462,13 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   ): Promise<BankingInstitution[]> {
     let sessionKey = prometeoSessionKey;
 
-    if (!prometeoSessionKey) {
+    if (!sessionKey) {
       sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
     }
 
-    const response: { data: BankingInstitution[] } =
-      await prometeo.listInstitutionsForTransfers({ key: sessionKey });
+    const response = await prometeoMic.listInstitutionsForTransfers({
+      key: sessionKey,
+    });
 
     return response.data;
   }
@@ -483,19 +481,16 @@ export class BankingService extends PrismaClient implements OnModuleInit {
   ): Promise<TransferRequest> {
     let sessionKey = prometeoSessionKey;
 
-    if (!prometeoSessionKey) {
+    if (!sessionKey) {
       log.trace("session key is not provided, doing login...");
       sessionKey = await this.doLoginToPrometeoAPI(userId, bankingDirectoryId);
       log.trace("successfully logged in Prometeo API");
     }
 
-    const transferRequestPayload = {
+    const response = await prometeoMic.preprocessTransfer({
       key: sessionKey,
       ...payload,
-    };
-
-    const response: { request: TransferRequest } =
-      await prometeo.preprocessTransfer(transferRequestPayload);
+    });
 
     log.debug("preprocess transfer response was...", response);
 
@@ -524,11 +519,11 @@ export class BankingService extends PrismaClient implements OnModuleInit {
       log.trace("successfully logged in Prometeo API");
     }
 
-    const result = await prometeo.confirmTransfer({
+    const response = await prometeoMic.confirmTransfer({
       ...payload,
       key: sessionKey,
     });
 
-    return result;
+    return response.result;
   }
 }
