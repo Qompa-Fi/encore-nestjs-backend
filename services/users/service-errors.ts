@@ -16,4 +16,12 @@ export namespace ServiceError {
   ).withDetails({
     "x-error": "user_already_exists",
   });
+
+  export const noSingleFieldWasUpdated = APIError.aborted(
+    "no single field was updated",
+  ).withDetails({ "x-error": "no_field_was_updated" });
+
+  export const missingUser = APIError.aborted(
+    "you should create your user first",
+  ).withDetails({ "x-error": "missing_user" });
 }

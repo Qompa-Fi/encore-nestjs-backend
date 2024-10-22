@@ -1,14 +1,14 @@
+import { type User as UserModel, PrismaClient } from "@prisma/client";
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { secret } from "encore.dev/config";
+
+import type { CreateUserInputs, UpdateUserInputs } from "./types/inputs";
 import {
-  type User as UserModel,
-  type Prisma,
-  PrismaClient,
-} from "@prisma/client";
-import type { CreateUserInputs } from "./types/inputs";
+  validateCreateUserInputs,
+  validateUpdateUserInputs,
+} from "./validators/inputs";
 import { ServiceError } from "./service-errors";
-import { validateCreateUserInputs } from "./validators/request";
 import log from "encore.dev/log";
 
 const clerkPublishableKey = secret("ClerkPublishableKey");
@@ -75,14 +75,34 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  async update(
-    userId: number,
-    input: Prisma.UserUpdateInput,
-  ): Promise<UserModel> {
-    const data: Prisma.UserUpdateInput = {};
+  async update(userId: number, inputs: UpdateUserInputs): Promise<UserModel> {
+    const apiError = validateUpdateUserInputs(inputs);
+    if (apiError) {
+      log.debug("request payload was invalid");
+      throw apiError;
+    }
 
-    if (input.onboardedAt !== undefined && input.onboardedAt !== null) {
-      data.onboardedAt = input.onboardedAt;
+    const user = await this.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) throw ServiceError.internalUserNotFound;
+
+    const data: Record<string, string | boolean> = {};
+
+    if (inputs.document) {
+      data.documentType = inputs.document.type;
+      data.documentNumber = inputs.document.number;
+    }
+
+    if (inputs.acceptTermsAndPrivacyPolicy) {
+      data.acceptTermsAndPrivacyPolicy = inputs.acceptTermsAndPrivacyPolicy;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw ServiceError.noSingleFieldWasUpdated;
     }
 
     return await this.user.update({

@@ -1,15 +1,20 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import type { CreateUserParams, ExistsByIDParams } from "./types/request";
+import { mayGetInternalUserIdFromAuthData, mustGetAuthData } from "@/lib/clerk";
+import type {
+  CreateUserParams,
+  ExistsByIDParams,
+  UpdateUserParams,
+} from "./types/request";
 import type {
   CreateUserResponse,
   ExistsByIDResponse,
+  UpdateUserResponse,
   GetUserResponse,
 } from "./types/response";
 import applicationContext from "@/services/applicationContext";
 import { toSerializableUser } from "./helpers/serializable";
-import { mustGetAuthData } from "@/lib/clerk";
 import { ServiceError } from "./service-errors";
 
 export const getUser = api<void, GetUserResponse>(
@@ -49,6 +54,27 @@ export const createUser = api<CreateUserParams, CreateUserResponse>(
     });
 
     return { user: toSerializableUser(user) };
+  },
+);
+
+export const updateUser = api<UpdateUserParams, UpdateUserResponse>(
+  { expose: true, method: "PATCH", path: "/user", auth: true },
+  async (payload) => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) throw ServiceError.missingUser;
+
+    const { usersService } = await applicationContext;
+
+    try {
+      const user = await usersService.update(userId, payload);
+
+      return { user: toSerializableUser(user) };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(`unhandled error when trying to update user: ${error}`);
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
 

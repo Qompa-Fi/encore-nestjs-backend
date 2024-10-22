@@ -6,6 +6,8 @@ export interface GetUserResponse {
 
 export type CreateUserResponse = GetUserResponse;
 
+export type UpdateUserResponse = GetUserResponse;
+
 export interface ExistsByIDResponse {
   userExists: boolean;
 }
