@@ -50,7 +50,7 @@ export const createUser = api<CreateUserParams, CreateUserResponse>(
     );
 
     const user = await usersService.create(clerkId, {
-      acceptTermsAndPrivacyPolicy: payload.acceptTermsAndPrivacyPolicy,
+      acceptTermsAndPrivacyPolicy: payload.accept_terms_and_privacy_policy,
     });
 
     return { user: toSerializableUser(user) };
@@ -66,7 +66,10 @@ export const updateUser = api<UpdateUserParams, UpdateUserResponse>(
     const { usersService } = await applicationContext;
 
     try {
-      const user = await usersService.update(userId, payload);
+      const user = await usersService.update(userId, {
+        acceptTermsAndPrivacyPolicy: payload.accept_terms_and_privacy_policy,
+        document: payload.document,
+      });
 
       return { user: toSerializableUser(user) };
     } catch (error) {

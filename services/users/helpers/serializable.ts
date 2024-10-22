@@ -12,8 +12,8 @@ export const toSerializableUser = (user: UserModel): SerializableUser => {
 
   return {
     id: user.id,
-    clerkId: user.clerkId,
-    onboardedAt: user.onboardedAt?.toISOString(),
+    clerk_id: user.clerkId,
+    onboarded_at: user.onboardedAt?.toISOString(),
     document,
   };
 };
