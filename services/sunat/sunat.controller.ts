@@ -2,13 +2,18 @@ import { organizations as organizationMicroservice } from "~encore/clients";
 import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
-import { mustGetAuthData, mustGetUserIdFromPublicMetadata } from "@/lib/clerk";
+import {
+  mayGetInternalUserIdFromAuthData,
+  mustGetAuthData,
+  mustGetUserIdFromPublicMetadata,
+} from "@/lib/clerk";
 import { toSerializableSunatProfile } from "./helpers/serializable";
 import { checkSaveSunatProfileDto } from "./validators/request";
 import applicationContext from "../applicationContext";
 import { ServiceError } from "./service-errors";
 import { checkRuc } from "@/lib/sunat";
 import type {
+  CountSunatProfilesResponse,
   SaveSunatProfileResponse,
   GetSunatProfileResponse,
   SearchByDNIResponse,
@@ -137,6 +142,28 @@ export const getSunatProfile = api<void, GetSunatProfileResponse>(
     return {
       sunatProfile: toSerializableSunatProfile(profile),
     };
+  },
+);
+
+export const countSunatProfiles = api<void, CountSunatProfilesResponse>(
+  {
+    expose: false,
+    auth: true,
+  },
+  async () => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) throw ServiceError.userNotFound;
+
+    const { sunatService } = await applicationContext;
+
+    try {
+      const count = await sunatService.countSunatProfiles(userId);
+
+      return { count };
+    } catch (error) {
+      log.error(error, "caught error while counting directories");
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
 

@@ -20,3 +20,7 @@ export interface GetSunatProfileResponse {
 }
 
 export type SaveSunatProfileResponse = GetSunatProfileResponse;
+
+export interface CountSunatProfilesResponse {
+  count: number;
+}
