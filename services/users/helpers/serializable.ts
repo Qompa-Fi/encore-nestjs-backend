@@ -13,7 +13,6 @@ export const toSerializableUser = (user: UserModel): SerializableUser => {
   return {
     id: user.id,
     clerk_id: user.clerkId,
-    onboarded_at: user.onboardedAt?.toISOString(),
     document,
   };
 };
