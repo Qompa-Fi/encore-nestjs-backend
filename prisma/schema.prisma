@@ -14,10 +14,18 @@ enum OrganizationRole {
   @@map("organization_role")
 }
 
+enum DocumentType {
+  dni
+  passport
+  immigration_card
+}
+
 model User {
   id                  Int                   @id @default(autoincrement())
   clerkId             String                @unique @map("clerk_id")
   onboardedAt         DateTime?             @map("onboarded_at")
+  documentNumber      String?               @unique @map("document_number")
+  documentType        DocumentType?         @map("document_type")
   sunatProfile        SunatProfile?         @relation(fields: [sunatProfileId], references: [id])
   organizationMembers OrganizationMembers[]
   bankingDirectories  BankingDirectory[]
