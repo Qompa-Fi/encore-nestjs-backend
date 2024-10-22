@@ -12,6 +12,7 @@ import type {
   ExistsByIDResponse,
   UpdateUserResponse,
   GetUserResponse,
+  CheckUserStatusResponse,
 } from "./types/response";
 import applicationContext from "@/services/applicationContext";
 import { toSerializableUser } from "./helpers/serializable";
@@ -76,6 +77,34 @@ export const updateUser = api<UpdateUserParams, UpdateUserResponse>(
       if (error instanceof APIError) throw error;
 
       log.error(`unhandled error when trying to update user: ${error}`);
+      throw ServiceError.somethingWentWrong;
+    }
+  },
+);
+
+export const checkUserStatus = api<void, CheckUserStatusResponse>(
+  {
+    expose: true,
+    method: "GET",
+    path: "/user/status",
+    auth: true,
+  },
+  async () => {
+    const clerkUser = mustGetAuthData();
+
+    const internalUserId = clerkUser.metadata.publicMetadata.internalUserId;
+    if (!internalUserId) throw ServiceError.missingUser;
+
+    const { usersService } = await applicationContext;
+
+    try {
+      const status = await usersService.getUserStatus(clerkUser);
+
+      return { status };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(`unhandled error when trying to get user status: ${error}`);
       throw ServiceError.somethingWentWrong;
     }
   },

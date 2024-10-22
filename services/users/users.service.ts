@@ -1,15 +1,18 @@
 import { type User as UserModel, PrismaClient } from "@prisma/client";
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
 import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { banking as bankingMic, sunat as sunatMic } from "~encore/clients";
 import { secret } from "encore.dev/config";
+import log from "encore.dev/log";
 
+import type { AuthenticatedUser } from "../auth/interfaces/clerk.interface";
 import type { CreateUserInputs, UpdateUserInputs } from "./types/inputs";
+import type { UserStatus } from "./types/status";
 import {
   validateCreateUserInputs,
   validateUpdateUserInputs,
 } from "./validators/inputs";
 import { ServiceError } from "./service-errors";
-import log from "encore.dev/log";
 
 const clerkPublishableKey = secret("ClerkPublishableKey");
 const clerkSecretKey = secret("ClerkSecretKey");
@@ -120,6 +123,29 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       where: { id: userId },
       data,
     });
+  }
+
+  async getUserStatus(clerkUser: AuthenticatedUser): Promise<UserStatus> {
+    const { count: directoryCount } = await bankingMic.countDirectories();
+
+    const { count: sunatProfileCount } = await sunatMic.countSunatProfiles();
+
+    const verifiedPhoneNumber = clerkUser.metadata.phoneNumbers.find(
+      (p) => p.verification && p.verification.status === "verified",
+    );
+
+    const verifiedEmailAddress = clerkUser.metadata.emailAddresses.find(
+      (p) => p.verification && p.verification.status === "verified",
+    );
+
+    return {
+      bank_account_setup_completed: directoryCount > 0,
+      phone_number_verified: !!verifiedPhoneNumber,
+      sol_setup_completed: sunatProfileCount > 0,
+      email_verified: !!verifiedEmailAddress,
+      tyc_accepted:
+        !!clerkUser.metadata.publicMetadata.acceptTermsAndPrivacyPolicy,
+    };
   }
 
   async resolveIdByClerkId(clerkId: string): Promise<number> {
