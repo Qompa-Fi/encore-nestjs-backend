@@ -186,6 +186,10 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     return result;
   }
 
+  async countSunatProfiles(userId: number): Promise<number> {
+    return this.sunatProfile.count({ where: { userId } });
+  }
+
   async searchByDNI(dni: string): Promise<IDNI | null> {
     const results = await this.searchEntities<IDNI>([
       {

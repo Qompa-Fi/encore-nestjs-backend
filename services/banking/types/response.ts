@@ -53,3 +53,7 @@ export interface ListCatalogResponse {
 export interface PreprocessTranferResponse {
   request: TransferRequest;
 }
+
+export interface CountDirectoriesResponse {
+  count: number;
+}

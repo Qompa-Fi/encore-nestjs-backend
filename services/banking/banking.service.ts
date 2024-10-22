@@ -278,6 +278,14 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     return results;
   }
 
+  async getUserDirectoryCount(userId: number): Promise<number> {
+    return await this.bankingDirectory.count({
+      where: {
+        userId: userId,
+      },
+    });
+  }
+
   private async getCachedPrometeoLogin(
     userId: number,
     bankingDirectoryId: number,
