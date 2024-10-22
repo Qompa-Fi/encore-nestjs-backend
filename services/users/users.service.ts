@@ -97,8 +97,19 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       data.documentNumber = inputs.document.number;
     }
 
-    if (inputs.acceptTermsAndPrivacyPolicy) {
-      data.acceptTermsAndPrivacyPolicy = inputs.acceptTermsAndPrivacyPolicy;
+    // ! might get more complex with time
+    if (inputs.acceptTermsAndPrivacyPolicy !== undefined) {
+      const clerkUser = await this.clerkClient.users.getUser(user.clerkId);
+      if (!clerkUser) {
+        throw ServiceError.somethingWentWrong;
+      }
+
+      await this.clerkClient.users.updateUserMetadata(clerkUser.id, {
+        publicMetadata: {
+          ...clerkUser.publicMetadata,
+          acceptTermsAndPrivacyPolicy: inputs.acceptTermsAndPrivacyPolicy,
+        },
+      });
     }
 
     if (Object.keys(data).length === 0) {
