@@ -126,7 +126,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
   }
 
   async getUserStatus(clerkUser: AuthenticatedUser): Promise<UserStatus> {
-    const { count: directoryCount } = await bankingMic.countDirectories();
+    const { count: directoryCount } = await bankingMic.countUserDirectories();
 
     const { count: sunatProfileCount } = await sunatMic.countSunatProfiles();
 
