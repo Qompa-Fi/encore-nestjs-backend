@@ -11,6 +11,7 @@ import type {
   QueryAccountMovementsResponse,
   ListDirectoryAccountsResponse,
   PreprocessTranferResponse,
+  CountDirectoriesResponse,
   ConfirmTransferResponse,
   ListDirectoriesResponse,
   SubmitDirectoryResponse,
@@ -135,6 +136,28 @@ export const listDirectory = api<void, ListDirectoriesResponse>(
         updated_at: r.updatedAt?.toISOString() ?? null,
       })),
     };
+  },
+);
+
+export const countUserDirectories = api<void, CountDirectoriesResponse>(
+  {
+    expose: false,
+    auth: true,
+  },
+  async () => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) throw ServiceError.userNotFound;
+
+    const { bankingService } = await applicationContext;
+
+    try {
+      const count = await bankingService.getUserDirectoryCount(userId);
+
+      return { count };
+    } catch (error) {
+      log.error(error, "caught error while counting directories");
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
 
