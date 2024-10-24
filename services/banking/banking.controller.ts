@@ -110,7 +110,7 @@ export const renameDirectory = api<
 // If a client wants to gather banking data then it should start with this endpoint
 //  by first selecting a directory and then subsequently performing operations like
 // querying accounts, account movements, performing transfers, etc.
-export const listDirectory = api<void, ListDirectoriesResponse>(
+export const listDirectories = api<void, ListDirectoriesResponse>(
   {
     expose: true,
     method: "GET",
