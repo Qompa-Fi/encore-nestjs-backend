@@ -278,6 +278,29 @@ export class BankingService extends PrismaClient implements OnModuleInit {
     return results;
   }
 
+  async deleteDirectory(
+    userId: number,
+    directoryId: number,
+  ): Promise<{ id: number }> {
+    const count = await this.bankingDirectory.count({
+      where: {
+        id: directoryId,
+        userId,
+      },
+    });
+
+    if (count === 0) {
+      throw ServiceError.directoryNotFound;
+    }
+
+    return await this.bankingDirectory.delete({
+      where: {
+        userId,
+        id: directoryId,
+      },
+    });
+  }
+
   async getUserDirectoryCount(userId: number): Promise<number> {
     return await this.bankingDirectory.count({
       where: {
