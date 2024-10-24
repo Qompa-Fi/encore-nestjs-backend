@@ -64,8 +64,8 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     await this.clerkClient.users.updateUserMetadata(clerkUser.id, {
       publicMetadata: {
         ...clerkUser.publicMetadata,
-        acceptTermsAndPrivacyPolicy: inputs.acceptTermsAndPrivacyPolicy,
-        internalUserId: internalUser.id,
+        accepts_tyc: inputs.acceptsTyC,
+        internal_user_id: internalUser.id,
       },
     });
 
@@ -144,7 +144,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       sol_setup_completed: sunatProfileCount > 0,
       email_verified: !!verifiedEmailAddress,
       tyc_accepted:
-        !!clerkUser.metadata.publicMetadata.acceptTermsAndPrivacyPolicy,
+        !!clerkUser.metadata.publicMetadata.accepts_tyc,
     };
   }
 

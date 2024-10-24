@@ -92,7 +92,7 @@ export const checkUserStatus = api<void, CheckUserStatusResponse>(
   async () => {
     const clerkUser = mustGetAuthData();
 
-    const internalUserId = clerkUser.metadata.publicMetadata.internalUserId;
+    const internalUserId = clerkUser.metadata.publicMetadata.internal_user_id;
     if (!internalUserId) throw ServiceError.missingUser;
 
     const { usersService } = await applicationContext;

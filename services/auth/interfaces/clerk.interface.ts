@@ -82,8 +82,8 @@ interface IUser {
   readonly firstName: string | null;
   readonly lastName: string | null;
   readonly publicMetadata: {
-    acceptTermsAndPrivacyPolicy: boolean | undefined;
-    internalUserId: number | undefined;
+    accepts_tyc: boolean | undefined;
+    internal_user_id: number | undefined;
   };
   readonly privateMetadata: { [k: string]: unknown };
   readonly unsafeMetadata: { [k: string]: unknown };

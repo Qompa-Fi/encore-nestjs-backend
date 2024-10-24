@@ -15,7 +15,7 @@ export const mustGetAuthData = (): AuthenticatedUser => {
 export const mustGetUserIdFromPublicMetadata = (
   authenticatedUser: AuthenticatedUser,
 ): number => {
-  const userId = authenticatedUser.metadata.publicMetadata.internalUserId;
+  const userId = authenticatedUser.metadata.publicMetadata.internal_user_id;
   if (!userId) {
     throw APIError.notFound("you should create your user first");
   }
@@ -27,5 +27,5 @@ export const mayGetInternalUserIdFromAuthData = (): number | undefined => {
   const authenticatedUser = getAuthData();
   if (!authenticatedUser) return undefined;
 
-  return authenticatedUser.metadata.publicMetadata.internalUserId;
+  return authenticatedUser.metadata.publicMetadata.internal_user_id;
 };

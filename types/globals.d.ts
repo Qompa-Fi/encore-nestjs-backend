@@ -2,8 +2,8 @@ declare global {
   interface UserUnsafeMetadata {}
 
   interface UserPublicMetadata {
-    acceptTermsAndPrivacyPolicy: boolean | undefined;
-    internalUserId: number | undefined;
+    accepts_tyc: boolean | undefined;
+    internal_user_id: number | undefined;
   }
 }
 
