@@ -51,7 +51,7 @@ export const createUser = api<CreateUserParams, CreateUserResponse>(
     );
 
     const user = await usersService.create(clerkId, {
-      acceptsTyC: payload.accepts_terms_and_conditions,
+      acceptsTyC: payload.accepts_terms_and_conditions ?? false,
     });
 
     return { user: toSerializableUser(user) };

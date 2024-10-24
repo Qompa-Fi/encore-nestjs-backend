@@ -1,7 +1,7 @@
 import type { DocumentType } from "./user";
 
 export interface CreateUserParams {
-  accepts_terms_and_conditions: boolean;
+  accepts_terms_and_conditions?: boolean;
 }
 
 export interface UpdateUserParams {
