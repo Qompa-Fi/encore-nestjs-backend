@@ -50,7 +50,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       throw ServiceError.somethingWentWrong;
     }
 
-    const { acceptTermsAndPrivacyPolicy: _0, document, ...userData } = inputs;
+    const { acceptsTyC: _0, document, ...userData } = inputs;
 
     const internalUser = await this.user.create({
       data: {
@@ -101,7 +101,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     }
 
     // ! might get more complex with time
-    if (inputs.acceptTermsAndPrivacyPolicy !== undefined) {
+    if (inputs.acceptsTyC !== undefined) {
       const clerkUser = await this.clerkClient.users.getUser(user.clerkId);
       if (!clerkUser) {
         throw ServiceError.somethingWentWrong;
@@ -110,7 +110,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       await this.clerkClient.users.updateUserMetadata(clerkUser.id, {
         publicMetadata: {
           ...clerkUser.publicMetadata,
-          acceptTermsAndPrivacyPolicy: inputs.acceptTermsAndPrivacyPolicy,
+          accepts_tyc: inputs.acceptsTyC,
         },
       });
     }
@@ -143,8 +143,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       phone_number_verified: !!verifiedPhoneNumber,
       sol_setup_completed: sunatProfileCount > 0,
       email_verified: !!verifiedEmailAddress,
-      tyc_accepted:
-        !!clerkUser.metadata.publicMetadata.accepts_tyc,
+      tyc_accepted: !!clerkUser.metadata.publicMetadata.accepts_tyc,
     };
   }
 

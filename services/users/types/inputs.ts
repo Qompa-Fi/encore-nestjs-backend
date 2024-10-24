@@ -1,7 +1,7 @@
 import type { DocumentType } from "./user";
 
 export type CreateUserInputs = {
-  acceptTermsAndPrivacyPolicy: boolean;
+  acceptsTyC: boolean;
   document?: {
     type: DocumentType;
     number: string;

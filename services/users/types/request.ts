@@ -1,11 +1,11 @@
 import type { DocumentType } from "./user";
 
 export interface CreateUserParams {
-  accept_terms_and_privacy_policy: boolean;
+  accepts_terms_and_conditions: boolean;
 }
 
 export interface UpdateUserParams {
-  accept_terms_and_privacy_policy?: boolean;
+  accepts_terms_and_conditions?: boolean;
   document?: {
     type: DocumentType;
     number: string;
