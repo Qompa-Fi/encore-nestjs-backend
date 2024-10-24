@@ -16,6 +16,7 @@ import type {
   ListDirectoriesResponse,
   SubmitDirectoryResponse,
   RenameDirectoryResponse,
+  DeleteDirectoryResponse,
   ListCatalogResponse,
 } from "./types/response";
 import type {
@@ -26,6 +27,7 @@ import type {
   RequestTransferParams,
   SubmitDirectoryParams,
   RenameDirectoryParams,
+  DeleteDirectoryParams,
 } from "./types/request";
 
 // This service allows to configure a directory with credentials to allow
@@ -102,6 +104,40 @@ export const renameDirectory = api<
         updated_at: result.updatedAt ? result.updatedAt.toISOString() : null,
       },
     };
+  },
+);
+
+// Delete the specified session's user banking directory.
+export const deleteDirectory = api<
+  DeleteDirectoryParams,
+  DeleteDirectoryResponse
+>(
+  {
+    expose: true,
+    method: "DELETE",
+    path: "/banking/directory/:id",
+    auth: true,
+  },
+  async (payload) => {
+    const userId = mayGetInternalUserIdFromAuthData();
+    if (!userId) throw ServiceError.userNotFound;
+
+    log.debug(
+      `user '${userId}' wants to delete its directory with ID '${payload.id}'`,
+    );
+
+    const { bankingService } = await applicationContext;
+
+    try {
+      const { id } = await bankingService.deleteDirectory(userId, payload.id);
+
+      return { id };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "unhandled error while deleting directory");
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
 

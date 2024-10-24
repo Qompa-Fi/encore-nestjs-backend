@@ -16,6 +16,10 @@ export interface RenameDirectoryParams {
   name: string | null;
 }
 
+export interface DeleteDirectoryParams {
+  id: number;
+}
+
 export interface ListDirectoryAccountsParams {
   id: number;
 }

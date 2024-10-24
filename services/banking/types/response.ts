@@ -22,6 +22,10 @@ export interface RenameDirectoryResponse {
   directory: ExportableDirectory;
 }
 
+export interface DeleteDirectoryResponse {
+  id: number;
+}
+
 export interface ListDirectoriesResponse {
   data: ExportableDirectory[];
 }
